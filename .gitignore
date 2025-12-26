@@ -16,3 +16,46 @@ export_presets.cfg
 # Project-local volatile data
 data/local/
 /source/server/master/account_collection.tres
+
+# .NET build outputs
+bin/
+obj/
+out/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet packages
+packages/
+*.nupkg
+*.snupkg
+
+# Visual Studio cache
+.vs/
+*.vspscc
+*.vssscc
+.builds/
+
+# Rider
+.idea/
+
+# Additional build outputs
+[Tt]est[Rr]esult*/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+
+# Strong name key file
+.snk
+
+# Other files
+*.cache
+*.log

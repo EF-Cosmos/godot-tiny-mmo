@@ -1,9 +1,0 @@
-E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.AuthService\obj\Debug\net10.0\Game.AuthService.csproj.AssemblyReference.cache
-E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.AuthService\obj\Debug\net10.0\rpswa.dswa.cache.json
-E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.AuthService\obj\Debug\net10.0\Game.AuthService.GeneratedMSBuildEditorConfig.editorconfig
-E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.AuthService\obj\Debug\net10.0\Game.AuthService.AssemblyInfoInputs.cache
-E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.AuthService\obj\Debug\net10.0\Game.AuthService.AssemblyInfo.cs
-E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.AuthService\obj\Debug\net10.0\Game.AuthService.csproj.CoreCompileInputs.cache
-E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.AuthService\obj\Debug\net10.0\Game.AuthService.MvcApplicationPartsAssemblyInfo.cs
-E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.AuthService\obj\Debug\net10.0\Game.AuthService.MvcApplicationPartsAssemblyInfo.cache
-E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.AuthService\obj\Debug\net10.0\Game.AuthService.sourcelink.json
