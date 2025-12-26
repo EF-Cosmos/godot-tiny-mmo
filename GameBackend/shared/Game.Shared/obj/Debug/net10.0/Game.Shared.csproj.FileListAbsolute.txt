@@ -1,0 +1,13 @@
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\shared\Game.Shared\obj\Debug\net10.0\Game.Shared.csproj.AssemblyReference.cache
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\shared\Game.Shared\obj\Debug\net10.0\Game.Shared.GeneratedMSBuildEditorConfig.editorconfig
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\shared\Game.Shared\obj\Debug\net10.0\Game.Shared.AssemblyInfoInputs.cache
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\shared\Game.Shared\obj\Debug\net10.0\Game.Shared.AssemblyInfo.cs
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\shared\Game.Shared\obj\Debug\net10.0\Game.Shared.csproj.CoreCompileInputs.cache
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\shared\Game.Shared\obj\Debug\net10.0\Game.Shared.sourcelink.json
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\shared\Game.Shared\bin\Debug\net10.0\Game.Shared.deps.json
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\shared\Game.Shared\bin\Debug\net10.0\Game.Shared.dll
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\shared\Game.Shared\bin\Debug\net10.0\Game.Shared.pdb
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\shared\Game.Shared\obj\Debug\net10.0\Game.Shared.dll
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\shared\Game.Shared\obj\Debug\net10.0\refint\Game.Shared.dll
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\shared\Game.Shared\obj\Debug\net10.0\Game.Shared.pdb
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\shared\Game.Shared\obj\Debug\net10.0\ref\Game.Shared.dll

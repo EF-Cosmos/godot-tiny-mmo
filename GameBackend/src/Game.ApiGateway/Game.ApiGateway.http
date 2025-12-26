@@ -1,0 +1,6 @@
+@Game.ApiGateway_HostAddress = http://localhost:5190
+
+GET {{Game.ApiGateway_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

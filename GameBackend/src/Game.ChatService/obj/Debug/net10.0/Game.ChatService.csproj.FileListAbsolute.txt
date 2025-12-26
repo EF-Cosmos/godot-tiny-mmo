@@ -1,0 +1,9 @@
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.ChatService\obj\Debug\net10.0\Game.ChatService.csproj.AssemblyReference.cache
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.ChatService\obj\Debug\net10.0\rpswa.dswa.cache.json
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.ChatService\obj\Debug\net10.0\Game.ChatService.GeneratedMSBuildEditorConfig.editorconfig
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.ChatService\obj\Debug\net10.0\Game.ChatService.AssemblyInfoInputs.cache
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.ChatService\obj\Debug\net10.0\Game.ChatService.AssemblyInfo.cs
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.ChatService\obj\Debug\net10.0\Game.ChatService.csproj.CoreCompileInputs.cache
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.ChatService\obj\Debug\net10.0\Game.ChatService.MvcApplicationPartsAssemblyInfo.cs
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.ChatService\obj\Debug\net10.0\Game.ChatService.MvcApplicationPartsAssemblyInfo.cache
+E:\project\laptop\game\godot-tiny-mmo\GameBackend\src\Game.ChatService\obj\Debug\net10.0\Game.ChatService.sourcelink.json

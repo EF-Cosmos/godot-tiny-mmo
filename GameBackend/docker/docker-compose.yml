@@ -1,0 +1,176 @@
+version: '3.8'
+
+services:
+  # Consul (Service Discovery) - Start first
+  consul:
+    image: consul:1.15
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+      - CONSUL_LOCAL_CONFIG={"server":true,"bootstrap_expect":1}
+    networks:
+      - game-network
+    healthcheck:
+      test: ["CMD", "consul", "kv", "put", "@test", "ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.gateway
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Consul__ConsulHost=consul
+      - Consul__ConsulPort=8500
+      - Consul__Host=api-gateway
+      - Consul__Port=8080
+      - GlobalConfiguration__ServiceDiscoveryProvider__Host=consul
+      - GlobalConfiguration__ServiceDiscoveryProvider__Port=8500
+    depends_on:
+      consul:
+        condition: service_healthy
+    networks:
+      - game-network
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.auth
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Consul__ServiceName=auth-service
+      - Consul__Host=auth-service
+      - Consul__Port=8080
+      - Consul__ConsulHost=consul
+      - Consul__ConsulPort=8500
+      - Consul__HealthCheck__Endpoint=/health
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=game_auth;Username=postgres;Password=postgres
+    depends_on:
+      consul:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+    networks:
+      - game-network
+
+  # Game Service
+  game-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.game
+    ports:
+      - "5002:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Consul__ServiceName=game-service
+      - Consul__Host=game-service
+      - Consul__Port=8080
+      - Consul__ConsulHost=consul
+      - Consul__ConsulPort=8500
+      - Consul__HealthCheck__Endpoint=/health
+    depends_on:
+      consul:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - game-network
+
+  # Room Service
+  room-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.room
+    ports:
+      - "5003:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Consul__ServiceName=room-service
+      - Consul__Host=room-service
+      - Consul__Port=8080
+      - Consul__ConsulHost=consul
+      - Consul__ConsulPort=8500
+      - Consul__HealthCheck__Endpoint=/health
+    depends_on:
+      consul:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - game-network
+
+  # Chat Service
+  chat-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.chat
+    ports:
+      - "5004:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Consul__ServiceName=chat-service
+      - Consul__Host=chat-service
+      - Consul__Port=8080
+      - Consul__ConsulHost=consul
+      - Consul__ConsulPort=8500
+      - Consul__HealthCheck__Endpoint=/health
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=game_chat;Username=postgres;Password=postgres
+    depends_on:
+      consul:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+    networks:
+      - game-network
+
+  # PostgreSQL
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=game_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - game-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - game-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  game-network:
+    driver: bridge
