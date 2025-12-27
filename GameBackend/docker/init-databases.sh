@@ -13,6 +13,8 @@ EOSQL
 }
 
 # Create additional databases
+create_database game_auth
+create_database game_chat
 create_database game_analytics
 create_database game_leaderboard
 

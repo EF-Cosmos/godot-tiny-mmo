@@ -1,10 +1,22 @@
+using Game.AuthService.Data;
+using Game.AuthService.Services;
 using Game.Shared.Consul;
+using Microsoft.EntityFrameworkCore;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+
+// Add Database Context
+builder.Services.AddDbContext<AuthDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Add Authentication Service
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
 // Add Consul service discovery
 builder.Services.AddConsulServiceDiscovery(builder.Configuration);
@@ -23,13 +35,32 @@ builder.Services.AddOpenTelemetry()
 
 var app = builder.Build();
 
+// Apply migrations on startup
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+    try 
+    {
+        dbContext.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        // Log error or handle it (e.g. if DB is not ready yet)
+        Console.WriteLine($"Could not migrate database: {ex.Message}");
+    }
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection(); // Often disabled in internal microservices behind gateway
+
+app.UseAuthorization();
+
+app.MapControllers();
 
 // Health check endpoint
 app.MapGet("/health", () => Results.Ok(new
@@ -40,28 +71,30 @@ app.MapGet("/health", () => Results.Ok(new
     version = "1.0.0"
 }));
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+// Register with Consul
+var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+var consulClient = app.Services.GetRequiredService<ConsulClient>();
+var consulOptions = app.Services.GetRequiredService<ConsulServiceOptions>();
 
-app.MapGet("/weatherforecast", () =>
+lifetime.ApplicationStarted.Register(async () =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    // Update port if running on a random port in development
+    if (app.Environment.IsDevelopment())
+    {
+        var addresses = app.Urls;
+        if (addresses.Count > 0)
+        {
+            var address = addresses.First();
+            var uri = new Uri(address);
+            consulOptions.Port = uri.Port;
+        }
+    }
+    await consulClient.RegisterServiceAsync(consulOptions);
+});
+
+lifetime.ApplicationStopping.Register(async () =>
+{
+    await consulClient.DeregisterServiceAsync(consulOptions.ServiceId);
+});
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
