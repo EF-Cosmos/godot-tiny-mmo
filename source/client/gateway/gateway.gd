@@ -10,6 +10,7 @@ const GatewayApi = preload("res://source/common/network/gateway_api.gd")
 var account_id: int
 var account_name: String
 var token: int = randi()
+var jwt_token: String = ""
 
 var current_world_id: int
 var selected_skin_id: int
@@ -135,16 +136,21 @@ func _on_login_login_button_pressed() -> void:
 	var d: Dictionary = await do_request(
 		HTTPClient.Method.METHOD_POST,
 		GatewayApi.login(),
-		{"u": username, "p": password,
-		GatewayApi.KEY_TOKEN_ID: token}
+		{"username": username, "password": password}
 	)
-	if d.has("error"):
+	if d.has("error") or not d.has("token"):
+		if not d.has("error"): d["error"] = "Login failed"
 		await popup_panel.confirm_message(str(d))
 		login_button.disabled = false
 		return
 	
-	populate_worlds(d.get("w", {}))
-	fill_connection_info(d["a"]["name"], d["a"]["id"])
+	# New backend response: { "userId": 1, "username": "name", "token": "jwt...", "expiration": "..." }
+	# Adapt to old logic
+	populate_worlds({}) # TODO: Fetch worlds from GameService
+	fill_connection_info(d["username"], d["userId"])
+	
+	# Store JWT token if needed
+	jwt_token = d["token"]
 	
 	popup_panel.hide()
 	_show($WorldSelection, false)
@@ -307,17 +313,20 @@ func create_account() -> void:
 	var d: Dictionary = await do_request(
 		HTTPClient.Method.METHOD_POST,
 		GatewayApi.account_create(),
-		{"u": name_edit.text, "p": password_edit.text,
-		GatewayApi.KEY_TOKEN_ID: token}
+		{"username": name_edit.text, "password": password_edit.text}
 	)
-	if d.has("error"):
+	if d.has("error") or not d.has("token"):
+		if not d.has("error"): d["error"] = "Registration failed"
 		await popup_panel.confirm_message(str(d))
 		$CreateAccountPanel.show()
 		return
 	
-	fill_connection_info(d["a"]["name"], d["a"]["id"])
-	populate_worlds(d.get("w", {}))
+	# New backend response: { "userId": 1, "username": "name", "token": "jwt...", "expiration": "..." }
+	fill_connection_info(d["username"], d["userId"])
+	populate_worlds({}) # TODO: Fetch worlds
 	
+	jwt_token = d["token"]
+
 	popup_panel.hide()
 	_show($WorldSelection, false)
 

@@ -10,7 +10,7 @@ const KEY_CHAR_ID: String = "c-id"
 
 static func base_url() -> String:
 	# Hardcoded default one
-	return "http://127.0.0.1:8088"
+	return "http://localhost:5000"
 	#var command_line_arg: String = CmdlineUtils.get_parsed_args().get("api", "")
 	#if command_line_arg:
 		#return command_line_arg
@@ -28,11 +28,11 @@ static func get_endpoint(path: String) -> String:
 
 
 # Endpoints
-static func login() -> String: return get_endpoint("/v1/login")
-static func guest() -> String: return get_endpoint("/v1/guest")
-static func worlds() -> String: return get_endpoint("/v1/worlds")
+static func login() -> String: return get_endpoint("/api/auth/login")
+static func guest() -> String: return get_endpoint("/api/auth/guest")
+static func worlds() -> String: return get_endpoint("/api/game/worlds")
 static func account_create() -> StringName:
-		return get_endpoint(&"/v1/account/create")
-static func world_characters() -> String: return get_endpoint("/v1/world/characters")
-static func world_enter() -> String: return get_endpoint("/v1/world/enter")
-static func world_create_char() -> String: return get_endpoint("/v1/world/character/create")
+		return get_endpoint(&"/api/auth/register")
+static func world_characters() -> String: return get_endpoint("/api/game/world/characters")
+static func world_enter() -> String: return get_endpoint("/api/game/world/enter")
+static func world_create_char() -> String: return get_endpoint("/api/game/world/character/create")
