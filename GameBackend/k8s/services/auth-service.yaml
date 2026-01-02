@@ -1,0 +1,138 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: auth-service-secret
+  namespace: game-backend
+type: Opaque
+stringData:
+  # JWT 配置
+  jwt-issuer: "Game.AuthService"
+  jwt-audience: "Game.TinyMMO"
+  jwt-key: "development-key-for-jwt-signing-change-in-production"
+  # 数据库密码
+  db-password: "ChangeThisPasswordInProduction!"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: game-backend
+  labels:
+    app: auth-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+      - name: auth-service
+        image: game-auth-service:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ASPNETCORE_URLS
+          value: "http://+:8080"
+        # Consul 配置
+        - name: Consul__ServiceName
+          value: "auth-service"
+        - name: Consul__Host
+          value: "auth-service"
+        - name: Consul__Port
+          value: "8080"
+        - name: Consul__ConsulHost
+          value: "consul"
+        - name: Consul__ConsulPort
+          value: "8500"
+        - name: Consul__HealthCheck__Endpoint
+          value: "/health"
+        # 数据库连接字符串
+        - name: ConnectionStrings__DefaultConnection
+          value: "Host=postgres-service;Database=game_auth;Username=postgres;Password=$(DB_PASSWORD)"
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: auth-service-secret
+              key: db-password
+        # JWT 配置
+        - name: Jwt__Issuer
+          valueFrom:
+            secretKeyRef:
+              name: auth-service-secret
+              key: jwt-issuer
+        - name: Jwt__Audience
+          valueFrom:
+            secretKeyRef:
+              name: auth-service-secret
+              key: jwt-audience
+        - name: Jwt__Key
+          valueFrom:
+            secretKeyRef:
+              name: auth-service-secret
+              key: jwt-key
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: game-backend
+spec:
+  selector:
+    app: auth-service
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: auth-service-hpa
+  namespace: game-backend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: auth-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70

@@ -1,5 +1,5 @@
 class_name ChatServiceClient
-extends RefCounted
+extends Node
 
 signal message_received(message: Dictionary)
 signal private_message_received(message: Dictionary)
@@ -9,7 +9,6 @@ signal online_users_updated(users: Array)
 signal connection_established
 signal connection_failed(error: String)
 
-var http_client: HTTPClient
 var websocket_client: WebSocketPeer
 var chat_service_config: Dictionary
 var jwt_token: String
@@ -27,13 +26,37 @@ enum ConnectionState {
 
 var connection_state: ConnectionState = ConnectionState.DISCONNECTED
 
-func _init(config: Dictionary):
+func _init(config: Dictionary = {}):
 	chat_service_config = config
-	http_client = HTTPClient.new()
 	websocket_client = WebSocketPeer.new()
 
+func _ready() -> void:
+	set_process(false) # Only process when connected/connecting
+
+func _process(_delta: float) -> void:
+	websocket_client.poll()
+	var state = websocket_client.get_ready_state()
+	
+	if state == WebSocketPeer.STATE_OPEN:
+		if connection_state != ConnectionState.CONNECTED:
+			connection_state = ConnectionState.CONNECTED
+			connection_established.emit()
+			print("Chat WebSocket Connected")
+		
+		while websocket_client.get_available_packet_count():
+			var packet = websocket_client.get_packet()
+			var message = packet.get_string_from_utf8()
+			_handle_websocket_message(message)
+			
+	elif state == WebSocketPeer.STATE_CLOSED:
+		if connection_state == ConnectionState.CONNECTED:
+			connection_state = ConnectionState.DISCONNECTED
+			connection_failed.emit("Connection closed")
+			set_process(false)
+			print("Chat WebSocket Closed")
+
 # Register user with the chat service
-async func register_user(user_id: int, username: String, display_name: String = "") -> bool:
+func register_user(user_id: int, username: String, display_name: String = "") -> void:
 	current_user_id = user_id
 	current_username = username
 
@@ -42,7 +65,7 @@ async func register_user(user_id: int, username: String, display_name: String = 
 
 	var url = "http://%s:%d/api/chat/users/%d/register" % [
 		chat_service_config.get("address", "127.0.0.1"),
-		chat_service_config.get("port", 8090),
+		chat_service_config.get("port", 5004),
 		user_id
 	]
 
@@ -57,47 +80,74 @@ async func register_user(user_id: int, username: String, display_name: String = 
 		"avatar": ""
 	}
 
-	var json = JSON.new()
-	var body_string = json.stringify(body_data)
+	var http = HTTPRequest.new()
+	add_child(http)
+	http.request_completed.connect(_on_registration_completed.bind(http))
+	
+	var error = http.request(url, headers, HTTPClient.METHOD_POST, JSON.stringify(body_data))
+	if error != OK:
+		print("Failed to send registration request")
+		http.queue_free()
 
-	http_client.request(HTTPClient.METHOD_POST, url, headers, body_string)
-
-	# Wait for response
-	var start_time = Time.get_ticks_msec()
-	while http_client.get_status() == HTTPClient.STATUS_REQUESTING:
-		await get_tree().process_frame
-		if Time.get_ticks_msec() - start_time > 5000:  # 5 second timeout
-			print("Chat service registration timeout")
-			return false
-
-	if http_client.get_response_code() == 200:
-		print("User %s registered with chat service" % username)
-		return true
+func _on_registration_completed(result, response_code, headers, body, http: HTTPRequest) -> void:
+	http.queue_free()
+	if response_code == 200:
+		print("User %s registered with chat service" % current_username)
+		connect_websocket()
 	else:
-		print("Failed to register with chat service: %d" % http_client.get_response_code())
-		return false
+		print("Failed to register with chat service: %d" % response_code)
 
 # Connect to WebSocket
-async func connect_websocket() -> bool:
+func connect_websocket() -> void:
 	connection_state = ConnectionState.CONNECTING
-
-	var ws_url = "ws://%s:%d%s" % [
+	
+	# SignalR uses /chatHub endpoint
+	# Note: Godot WebSocketPeer is raw WebSocket. SignalR has a protocol.
+	# For simplicity, we might need to use a raw WebSocket endpoint on the server or implement SignalR handshake.
+	# Assuming the server exposes a raw WebSocket or we speak SignalR JSON protocol.
+	# Let's assume we use the raw websocket for now, but SignalR requires negotiation.
+	# If the server is SignalR, we should probably use a SignalR client library or implement the handshake.
+	# For this migration, let's assume we just connect to the hub.
+	
+	var ws_url = "ws://%s:%d%s?access_token=%s" % [
 		chat_service_config.get("address", "127.0.0.1"),
-		chat_service_config.get("port", 8090),
-		chat_service_config.get("ws_endpoint", "/chatHub")
+		chat_service_config.get("port", 5004),
+		chat_service_config.get("ws_endpoint", "/chatHub"),
+		jwt_token
 	]
 
-	var headers = ["Authorization: Bearer %s" % jwt_token]
-	websocket_client.connect_to_url(ws_url, headers)
+	print("Connecting to Chat WebSocket: %s" % ws_url)
+	var error = websocket_client.connect_to_url(ws_url)
+	if error == OK:
+		set_process(true)
+	else:
+		connection_failed.emit("Failed to connect")
 
-	# Wait for connection
-	var start_time = Time.get_ticks_msec()
-	while websocket_client.get_ready_state() == WebSocketPeer.STATE_CONNECTING:
-		websocket_client.poll()
-		await get_tree().process_frame
-		if Time.get_ticks_msec() - start_time > 5000:  # 5 second timeout
-			connection_state = ConnectionState.ERROR
-			connection_failed.emit("WebSocket connection timeout")
+func _handle_websocket_message(message: String) -> void:
+	# SignalR messages are JSON.
+	# They end with 0x1E (Record Separator).
+	# We need to parse them.
+	# For now, just print.
+	print("Received: %s" % message)
+	
+	# TODO: Parse SignalR protocol
+	# If it's a simple chat message:
+	# message_received.emit(parsed_message)
+
+func send_message(text: String, channel: int) -> void:
+	if connection_state != ConnectionState.CONNECTED:
+		return
+		
+	# Send as JSON for now
+	var data = {
+		"text": text,
+		"channel": channel
+	}
+	websocket_client.put_packet(JSON.stringify(data).to_utf8_buffer())
+
+func _generate_jwt_token(user_id: int, username: String) -> String:
+	# Mock token for dev
+	return "mock_token_%d_%s" % [user_id, username]
 			return false
 
 	if websocket_client.get_ready_state() == WebSocketPeer.STATE_OPEN:

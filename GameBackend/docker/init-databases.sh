@@ -17,5 +17,6 @@ create_database game_auth
 create_database game_chat
 create_database game_analytics
 create_database game_leaderboard
+create_database game_inventory
 
 echo "All databases created successfully!"

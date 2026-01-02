@@ -20,6 +20,9 @@ var fade_out_tween: Tween
 func _ready() -> void:
 	InstanceClient.subscribe(&"chat.message", _on_chat_message)
 	
+	if ChatServiceManager.instance:
+		ChatServiceManager.instance.message_received.connect(_on_chat_message)
+	
 	peek_feed_message_edit.text_submitted.connect(_on_message_edit_text_submitted.bind(peek_feed_message_edit))
 	full_feed_message_edit.text_submitted.connect(_on_message_edit_text_submitted.bind(full_feed_message_edit))
 	
@@ -143,8 +146,11 @@ func _on_message_edit_text_submitted(new_text: String, line_edit: LineEdit) -> v
 			{"cmd": cmd, "params": params}
 		)
 	else:
-		InstanceClient.current.request_data(
-			&"chat.message.send",
-			Callable(), # ACK later
-			{"text": new_text, "channel": current_channel}
-		)
+		if ChatServiceManager.instance and ChatServiceManager.instance.chat_client and ChatServiceManager.instance.chat_client.connection_state == 2: # CONNECTED
+			ChatServiceManager.instance.chat_client.send_message(new_text, current_channel)
+		else:
+			InstanceClient.current.request_data(
+				&"chat.message.send",
+				Callable(), # ACK later
+				{"text": new_text, "channel": current_channel}
+			)

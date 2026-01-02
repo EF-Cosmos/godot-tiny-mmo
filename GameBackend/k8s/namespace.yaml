@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: game-backend
+  labels:
+    name: game-backend
+    app: tiny-mmo

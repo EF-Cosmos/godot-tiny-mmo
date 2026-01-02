@@ -4,13 +4,16 @@ using Game.ChatService.Services;
 using Game.Shared.Consul;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
+// using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+// builder.Services.AddOpenApi();
+
+// Add Consul service discovery
+builder.Services.AddConsulServiceDiscovery(builder.Configuration);
 
 // Database configuration
 var connectionString = builder.Configuration.GetConnectionString("PostgreSQL");
@@ -44,39 +47,39 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // Swagger/OpenAPI
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "Game Chat Service API",
-        Version = "v1",
-        Description = "Chat microservice for Godot Tiny MMO"
-    });
+// builder.Services.AddSwaggerGen(c =>
+// {
+//     c.SwaggerDoc("v1", new OpenApiInfo
+//     {
+//         Title = "Game Chat Service API",
+//         Version = "v1",
+//         Description = "Chat microservice for Godot Tiny MMO"
+//     });
 
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
+//     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+//     {
+//         Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+//         Name = "Authorization",
+//         In = ParameterLocation.Header,
+//         Type = SecuritySchemeType.ApiKey,
+//         Scheme = "Bearer"
+//     });
 
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
-    });
-});
+//     c.AddSecurityRequirement(new OpenApiSecurityRequirement
+//     {
+//         {
+//             new OpenApiSecurityScheme
+//             {
+//                 Reference = new OpenApiReference
+//                 {
+//                     Type = ReferenceType.SecurityScheme,
+//                     Id = "Bearer"
+//                 }
+//             },
+//             Array.Empty<string>()
+//         }
+//     });
+// });
 
 // Custom services
 builder.Services.AddScoped<IChatService, ChatService>();
@@ -100,11 +103,11 @@ builder.Services.AddCors(options =>
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
 if (!string.IsNullOrEmpty(redisConnectionString))
 {
-    builder.Services.AddStackExchangeRedisCache(options =>
-    {
-        options.Configuration = redisConnectionString;
-        options.InstanceName = "GameChat:";
-    });
+    // builder.Services.AddStackExchangeRedisCache(options =>
+    // {
+    //     options.Configuration = redisConnectionString;
+    //     options.InstanceName = "GameChat:";
+    // });
 }
 
 var app = builder.Build();
@@ -112,9 +115,9 @@ var app = builder.Build();
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-    app.MapOpenApi();
+    // app.UseSwagger();
+    // app.UseSwaggerUI();
+    // app.MapOpenApi();
 }
 
 app.UseHttpsRedirection();
@@ -137,6 +140,32 @@ app.MapGet("/health", () => Results.Ok(new
     service = "Game.ChatService",
     version = "1.0.0"
 }));
+
+// Register with Consul
+var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+var consulClient = app.Services.GetRequiredService<ConsulClient>();
+var consulOptions = app.Services.GetRequiredService<ConsulServiceOptions>();
+
+lifetime.ApplicationStarted.Register(async () =>
+{
+    // Update port if running on a random port in development
+    if (app.Environment.IsDevelopment())
+    {
+        var addresses = app.Urls;
+        if (addresses.Count > 0)
+        {
+            var address = addresses.First();
+            var uri = new Uri(address);
+            consulOptions.Port = uri.Port;
+        }
+    }
+    await consulClient.RegisterServiceAsync(consulOptions);
+});
+
+lifetime.ApplicationStopping.Register(async () =>
+{
+    await consulClient.DeregisterServiceAsync(consulOptions.ServiceId);
+});
 
 // Redirect root to Swagger
 app.MapGet("/", () => Results.Redirect("/swagger"));

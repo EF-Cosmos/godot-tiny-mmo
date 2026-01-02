@@ -1,5 +1,5 @@
 class_name ChatServiceManager
-extends RefCounted
+extends Node
 
 static var instance: ChatServiceManager
 var chat_client: ChatServiceClient
@@ -9,20 +9,28 @@ signal service_connected
 signal service_disconnected
 signal service_error(message: String)
 
-func _init():
+func _enter_tree() -> void:
 	if instance == null:
 		instance = self
 
+func _exit_tree() -> void:
+	if instance == self:
+		instance = null
+
 # Initialize chat service manager
-func initialize(player_id: int, username: String, display_name: String = ""):
+func initialize(player_id: int, username: String, display_name: String = "") -> void:
 	var config = ConfigManager.get_config("chat-service")
 
 	if not config.get("enabled", false):
 		print("Chat service is disabled in configuration")
-		return false
+		return
 
 	# Create chat client
+	if chat_client:
+		chat_client.queue_free()
+		
 	chat_client = ChatServiceClient.new(config)
+	add_child(chat_client)
 
 	# Connect signals
 	chat_client.connection_established.connect(_on_connection_established)
@@ -34,20 +42,7 @@ func initialize(player_id: int, username: String, display_name: String = ""):
 	chat_client.online_users_updated.connect(_on_online_users_updated)
 
 	# Register user and connect
-	if await chat_client.register_user(player_id, username, display_name):
-		if await chat_client.connect_websocket():
-			print("Chat service initialized successfully")
-			return true
-		else:
-			print("Failed to connect to chat service WebSocket")
-			if fallback_enabled:
-				print("Falling back to local chat system")
-				return false
-	else:
-		print("Failed to register user with chat service")
-		if fallback_enabled:
-			print("Falling back to local chat system")
-			return false
+	chat_client.register_user(player_id, username, display_name)
 
 	return false
 
