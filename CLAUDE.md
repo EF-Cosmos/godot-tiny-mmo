@@ -1,31 +1,37 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件为 Claude Code (claude.ai/code) 提供项目指导。
 
-## Project Overview
+## 项目概述
 
-Godot Tiny MMO is an experimental open-source MMORPG framework built with Godot 4.4+. The project consists of two parts:
+Godot Tiny MMO 是一个实验性开源 MMORPG 框架，基于 Godot 4.5 和 .NET 10.0 构建。项目由两部分组成：
 
 1. **Godot 原生游戏** (`/`) - 使用 GDScript 的客户端和服务器，采用自定义字节打包网络协议
-2. **GameBackend** (`/GameBackend`) - 基于 .NET 的微服务后端架构，正在逐步替代原有服务器逻辑
+2. **GameBackend** (`/GameBackend`) - 基于 .NET 10.0 的微服务后端架构，正在逐步替代原有服务器逻辑
 
 项目正在进行架构重构，逐渐将游戏后端从 GDScript 迁移到 .NET 微服务架构。
 
-## Running the Project
+---
+
+## 运行项目
 
 ### Godot 原生游戏
 
-1. Open in Godot 4.4 or 4.5
-2. Debug → "Customizable Run Instance..." → Enable "Multiple Instances" (4+)
-3. Set Feature Tags:
-   - Exactly one `gateway-server`
-   - Exactly one `master-server`
-   - Exactly one `world-server`
-   - One or more `client`
-4. Optional launch args: `--headless` (servers), `--config=path.cfg`
-5. Press F5
+1. 在 Godot 4.4 或 4.5 中打开项目
+2. Debug → "Customizable Run Instance..." → 启用 "Multiple Instances" (4+)
+3. 设置 Feature Tags:
+   - 恰好一个 `gateway-server`
+   - 恰好一个 `master-server`
+   - 恰好一个 `world-server`
+   - 一个或多个 `client`
+4. 可选启动参数: `--headless` (服务器), `--config=path.cfg`
+5. 按 F5 运行
 
-Configuration files are in `data/config/` (world_config.cfg, gateway_config.cfg, master_config.cfg, client_config.cfg).
+**配置文件** 位于 `data/config/`:
+- `client_config.cfg` - 客户端设置
+- `gateway_config.cfg` - Gateway 服务器设置
+- `master_config.cfg` - Master 服务器设置
+- `world_config.cfg` - World 服务器设置
 
 ### GameBackend 微服务
 
@@ -36,97 +42,125 @@ cd GameBackend
 docker-compose up -d
 
 # 或单独运行各个服务
-dotnet run --project Game.ApiGateway
-dotnet run --project Game.AuthService
-dotnet run --project Game.GameService
-dotnet run --project Game.RoomService
-dotnet run --project Game.ChatService
+dotnet run --project src/Game.ApiGateway
+dotnet run --project src/Game.AuthService
+dotnet run --project src/Game.GameService
+dotnet run --project src/Game.RoomService
+dotnet run --project src/Game.ChatService
 ```
 
-服务端口：
+**服务端口**:
 - **ApiGateway**: `5000`
-- **AuthService**: `5298` (HTTP), `7072` (gRPC)
-- **ChatService**: `8090`
+- **AuthService**: `5001`
+- **GameService**: `5002`
+- **RoomService**: `5003`
+- **ChatService**: `5004`
 - **Consul**: `8500`
 - **PostgreSQL**: `5432`
 - **Redis**: `6379`
+- **Jaeger**: `16686` (Web UI)
 
-## Architecture
+---
 
-### Three-Server Model
+## 架构
 
-- **Gateway Server** (`source/server/gateway/`): HTTP REST API for authentication, routes to master
-- **Master Server** (`source/server/master/`): Central orchestrator, account database, bridges gateways and world servers
-- **World Server** (`source/server/world/`): Hosts gameplay instances, 10 physics ticks/sec, max 200 players
+### 三服务器模型 (Godot 原生)
 
-### Directory Structure
+- **Gateway Server** (`source/server/gateway/`): HTTP REST API 处理认证，路由到 master
+- **Master Server** (`source/server/master/`): 中央协调器，账户数据库，连接 gateway 和 world 服务器
+- **World Server** (`source/server/world/`): 托管游戏实例，10 物理 tick/秒，最多 200 玩家
+
+### 目录结构
 
 ```
 source/
-├── client/          # Client-only (UI, local player, network clients)
-│   ├── autoload/    # ClientState singleton
-│   ├── gateway/     # Auth & character selection UI
+├── client/          # 客户端专用代码
+│   ├── autoload/    # ClientState 单例
+│   ├── gateway/     # 认证和角色选择 UI
 │   ├── network/     # InstanceClient, WorldClient
-│   └── ui/          # HUD, menus, inventory, chat
-├── common/          # Shared client+server code
-│   ├── gameplay/    # Characters, combat, items, maps, time
-│   ├── network/     # Wire protocol, RPC endpoints, state sync
-│   └── registry/    # ContentRegistryHub, PathRegistry
+│   └── ui/          # HUD、菜单、背包、聊天
+├── common/          # 客户端+服务器共享代码
+│   ├── gameplay/    # 角色、战斗、物品、地图、时间
+│   ├── network/     # Wire 协议、RPC 端点、状态同步
+│   ├── registry/    # ContentRegistryHub, PathRegistry
+│   └── microservices/  # 微服务客户端 (ChatServiceManager)
 └── server/
-    ├── gateway/     # REST auth endpoints
-    ├── master/      # Account management, orchestration
-    └── world/       # Instance management, gameplay handlers
-        └── components/data_request_handlers/  # RPC handlers
+    ├── gateway/     # REST 认证端点
+    ├── master/      # 账户管理、协调
+    └── world/       # 实例管理、游戏逻辑处理
+        └── components/data_request_handlers/  # RPC 处理器
 ```
 
-### State Synchronization
+### 状态同步
 
-The custom netcode uses packed binary format (`PackedByteArray`) via `source/common/network/wire.gd`:
-- **StateSynchronizer**: Applies baselines (full state) and deltas (incremental updates)
-- **PathRegistry**: Maps property paths to Field IDs (integers) for bandwidth efficiency
-- Zone-based updates for spatial optimization
+自定义网络代码使用字节打包格式 (`PackedByteArray`)，通过 `source/common/network/wire.gd`:
+- **StateSynchronizer**: 应用基线 (完整状态) 和增量 (更新)
+- **PathRegistry**: 将属性路径映射到字段 ID (整数) 以节省带宽
+- 基于区域的空间更新优化
 
-Key sync paths: `:position`, `:flipped`, `:anim`, `:pivot`, `:display_name`, `:skin_id`, `:zone_flags`
+**关键同步路径**: `:position`, `:flipped`, `:anim`, `:pivot`, `:display_name`, `:skin_id`, `:zone_flags`
 
-### Data Request Pattern
+### 数据请求模式
 
-Server RPC handlers follow the `DataRequestHandler` pattern in `source/server/world/components/data_request_handlers/`:
-- `action.perform` - Attack/ability execution
-- `chat.message.send` - Chat messages
-- `attribute.get/spend` - Character stats
-- `guild.create/get/search/quit` - Guild operations
+服务器 RPC 处理器遵循 `DataRequestHandler` 模式，位于 `source/server/world/components/data_request_handlers/`:
 
-Client calls: `InstanceClient.request_data(key, callback, args)` or `InstanceClient.subscribe(key, callback)`
+| 处理器 | 用途 |
+|--------|------|
+| `action.perform.gd` | 攻击/技能执行 |
+| `attribute.get.gd` | 获取角色属性 |
+| `attribute.spend.gd` | 消耗属性点 |
+| `chat.message.send.gd` | 发送聊天消息 |
+| `chat.command.exec.gd` | 执行聊天命令 |
+| `guild.create.gd` | 创建公会 |
+| `guild.get.gd` | 获取公会信息 |
+| `guild.search.gd` | 搜索公会 |
+| `guild.quit.gd` | 离开公会 |
+| `guild.self.gd` | 获取玩家公会 |
+| `inventory.get.gd` | 获取玩家背包 |
+| `item.equip.gd` | 装备物品 |
+| `profile.get.gd` | 获取玩家资料 |
+| `get.server_time.gd` | 获取服务器时间 |
 
-### Content Registry
+**客户端调用**: `InstanceClient.request_data(key, callback, args)` 或 `InstanceClient.subscribe(key, callback)`
 
-`ContentRegistryHub` (`source/common/registry/content_registry_hub.gd`) maps slugs to Resource IDs. Indexes auto-load from `source/common/registry/indexes/`.
+### 内容注册表
 
-### Authentication Flow
+`ContentRegistryHub` (`source/common/registry/content_registry_hub.gd`) 将 slug 映射到资源 ID。索引从 `source/common/registry/indexes/` 自动加载。
 
-1. Client → Gateway (HTTP): Login/guest at `/v1/login` or `/v1/guest`
-2. Gateway → Master: Get world list, character data
-3. Master → Gateway: Generate auth token
-4. Client → World Server (WebSocket): Connect with token
-5. World Server validates token, spawns player
+### 认证流程
 
-Gateway API endpoints defined in `source/common/network/gateway_api.gd`.
+1. 客户端 → Gateway (HTTP): 在 `/v1/login` 或 `/v1/guest` 登录/游客
+2. Gateway → Master: 获取世界列表、角色数据
+3. Master → Gateway: 生成认证令牌
+4. 客户端 → World Server (WebSocket): 使用令牌连接
+5. World Server 验证令牌，生成玩家
 
-## Key Classes
+Gateway API 端点定义在 `source/common/network/gateway_api.gd`:
 
-- **Character** → **Player** → **LocalPlayer**: Character hierarchy (CharacterBody2D-based)
-- **InstanceClient/WorldClient**: Client networking
-- **ServerInstance**: Per-map instance on world server (extends SubViewport)
-- **WorldServer/InstanceManager**: World server bootstrap and instance management
-- **Wire**: Binary serialization protocol
+```
+POST /v1/login              - 用户登录
+POST /v1/guest              - 游客登录
+POST /v1/account/create     - 创建账户
+POST /v1/world/characters   - 获取玩家角色
+POST /v1/world/character/create - 创建角色
+POST /v1/world/enter        - 进入世界
+```
 
-## Database
+## 核心类
 
-World server uses QAD format via `WorldDatabase` (`source/server/world/components/world_database.gd`) for PlayerData, Guild, ServerRoles. Master server stores accounts as `.tres` resources.
+- **Character** → **Player** → **LocalPlayer**: 角色层级结构 (基于 CharacterBody2D)
+- **InstanceClient/WorldClient**: 客户端网络
+- **ServerInstance**: World 服务器上的每地图实例 (继承 SubViewport)
+- **WorldServer/InstanceManager**: World 服务器启动和实例管理
+- **Wire**: 二进制序列化协议
 
-## Build Separation
+## 数据库
 
-Feature tags (`OS.has_feature()`) determine client vs server builds. The TinyMMO plugin (`addons/tinymmo/`) handles export modifications—removes client autoloads on server builds.
+World 服务器使用 QAD 格式，通过 `WorldDatabase` (`source/server/world/components/world_database.gd`) 存储 PlayerData、Guild、ServerRoles。Master 服务器将账户存储为 `.tres` 资源。
+
+## 构建分离
+
+特性标签 (`OS.has_feature()`) 决定客户端还是服务器构建。TinyMMO 插件 (`addons/tinymmo/`) 处理导出修改——在服务器构建时移除客户端 autoload。
 
 ---
 
@@ -140,16 +174,21 @@ Feature tags (`OS.has_feature()`) determine client vs server builds. The TinyMMO
 
 ```
 GameBackend/
-├── Game.ApiGateway/        # API 网关 (Ocelot)
-├── Game.AuthService/       # 认证服务
-├── Game.GameService/       # 游戏逻辑服务
-├── Game.RoomService/       # 房间管理服务
-├── Game.ChatService/       # 聊天服务 (SignalR)
-├── Game.Shared/            # 共享代码库
-│   ├── Consul/            # 服务发现实现
-│   ├── Dtos/              # 数据传输对象
-│   └── Models/            # 共享模型
-└── docker-compose.yml     # 容器编排配置
+├── src/
+│   ├── Game.ApiGateway/        # API 网关 (Ocelot)
+│   ├── Game.AuthService/       # 认证服务
+│   ├── Game.GameService/       # 游戏逻辑服务
+│   ├── Game.RoomService/       # 房间管理服务
+│   ├── Game.ChatService/       # 聊天服务 (SignalR)
+│   └── Game.GameMapService/    # 地图管理服务
+├── shared/
+│   └── Game.Shared/            # 共享代码库
+│       ├── Consul/            # 服务发现实现
+│       ├── Dtos/              # 数据传输对象
+│       └── Models/            # 共享模型
+├── docker/                     # Docker 配置
+├── k8s/                        # Kubernetes 清单
+└── docker-compose.yml          # 容器编排配置
 ```
 
 ## 微服务详解
@@ -170,7 +209,7 @@ GameBackend/
 - `Middleware/` - 自定义中间件
 - `Services/` - 各微服务的客户端封装
 
-### Game.AuthService (端口: 5298/7072)
+### Game.AuthService (端口: 5001)
 
 **职责**: 用户认证和授权
 
@@ -179,12 +218,14 @@ GameBackend/
 - JWT 令牌发放和验证
 - 用户信息管理
 - 健康检查
+- PostgreSQL 数据持久化
 
 **关键文件**:
 - `Controllers/AuthController.cs`
+- `Data/AuthDbContext.cs` - EF Core 数据上下文
 - `Services/` - 认证业务逻辑
 
-### Game.GameService
+### Game.GameService (端口: 5002)
 
 **职责**: 游戏核心逻辑
 
@@ -193,12 +234,13 @@ GameBackend/
 - 游戏规则执行
 - 游戏数据持久化
 - 与 Godot World Server 的数据同步
+- Orleans 分布式处理
 
 **关键文件**:
 - `Controllers/` - 游戏逻辑控制器
 - `Services/` - 游戏业务服务
 
-### Game.RoomService
+### Game.RoomService (端口: 5003)
 
 **职责**: 房间/实例管理
 
@@ -206,13 +248,14 @@ GameBackend/
 - 游戏房间创建和销毁
 - 玩家加入/离开房间
 - 房间状态同步
-- 配对逻辑
+- 匹配逻辑
+- Redis 缓存支持
 
 **关键文件**:
 - `Controllers/` - 房间管理控制器
 - `Services/` - 房间管理服务
 
-### Game.ChatService (端口: 8090)
+### Game.ChatService (端口: 5004)
 
 **职责**: 实时聊天通信
 
@@ -222,11 +265,21 @@ GameBackend/
 - 私聊功能
 - 消息持久化 (PostgreSQL)
 - 在线用户状态管理 (Redis)
+- 多频道支持
 
 **关键文件**:
 - `Hubs/ChatHub.cs` - SignalR Hub
 - `Controllers/ChatController.cs` - REST API
 - `Data/ChatDbContext.cs` - EF Core 数据上下文
+
+### Game.GameMapService
+
+**职责**: 地图数据管理
+
+**核心功能**:
+- 地图数据存储和检索
+- 地图实例管理
+- 与 Godot World Server 的地图同步
 
 ### Game.Shared
 
@@ -236,7 +289,7 @@ GameBackend/
 - `Consul/` - 服务发现和注册
   - `ConsulExtensions.cs` - 服务注册扩展
   - `ConsulClient.cs` - Consul 客户端封装
-  - `ConsulHostedService.cs` - 后台服务健康检查
+  - `ConsulServiceOptions.cs` - 服务配置选项
 - `Dtos/` - 数据传输对象 (DTO)
 - `Models/` - 共享数据模型
   - `User.cs`, `Game.cs`, `Room.cs`, `Message.cs`
@@ -247,22 +300,23 @@ GameBackend/
 | 类别 | 技术 |
 |------|------|
 | **框架** | .NET 10.0, ASP.NET Core 10.0 |
-| **API 网关** | Ocelot |
-| **服务发现** | Consul |
-| **实时通信** | SignalR |
-| **数据库** | PostgreSQL + Entity Framework Core |
-| **缓存** | Redis (StackExchange.Redis) |
-| **认证** | JWT Bearer + ASP.NET Core Identity |
+| **API 网关** | Ocelot 23.4.2 |
+| **服务发现** | Consul 1.15 |
+| **实时通信** | SignalR (ASP.NET Core) |
+| **分布式计算** | Microsoft Orleans 8.2.0 |
+| **数据库** | PostgreSQL 15 + EF Core 10.0 |
+| **缓存** | Redis 7 (StackExchange.Redis) |
+| **认证** | JWT Bearer |
 | **追踪** | OpenTelemetry + Jaeger |
-| **序列化** | MemoryPack, Newtonsoft.Json |
+| **序列化** | MemoryPack 1.10.0, Newtonsoft.Json |
 | **容器化** | Docker + docker-compose |
-| **API 文档** | Swagger/OpenAPI |
+| **编排** | Kubernetes |
 
 ## 服务间通信
 
 ```
                     ┌─────────────────┐
-                    │   Godot Client  │
+                    │   Godot 客户端  │
                     └────────┬────────┘
                              │ HTTP/SignalR
                              ▼
@@ -299,7 +353,28 @@ GameBackend/
 
 ```json
 {
-  "Routes": [...],      // 路由规则
+  "Routes": [
+    {
+      "DownstreamPathTemplate": "/api/Auth/{everything}",
+      "UpstreamPathTemplate": "/api/auth/{everything}",
+      "ServiceName": "auth-service"
+    },
+    {
+      "DownstreamPathTemplate": "/api/{everything}",
+      "UpstreamPathTemplate": "/api/game/{everything}",
+      "ServiceName": "game-service"
+    },
+    {
+      "DownstreamPathTemplate": "/api/{everything}",
+      "UpstreamPathTemplate": "/api/room/{everything}",
+      "ServiceName": "room-service"
+    },
+    {
+      "DownstreamPathTemplate": "/api/{everything}",
+      "UpstreamPathTemplate": "/api/chat/{everything}",
+      "ServiceName": "chat-service"
+    }
+  ],
   "GlobalConfiguration": {
     "ServiceDiscoveryProvider": {
       "Type": "Consul",
@@ -320,6 +395,12 @@ GameBackend/
 | Rooms | 聊天房间 |
 | Participants | 房间参与者 |
 
+### AuthService 数据库
+
+| 表 | 说明 |
+|----|------|
+| Users | 用户账户信息 |
+
 ## 迁移计划
 
 | 阶段 | 内容 |
@@ -328,7 +409,8 @@ GameBackend/
 | **Phase 2** | ChatService 上线，替代原有聊天系统 |
 | **Phase 3** | RoomService 上线，管理游戏实例 |
 | **Phase 4** | GameService 上线，逐步迁移游戏逻辑 |
-| **Phase 5** | 完全替换 GDScript 服务器，Godot 仅保留客户端 |
+| **Phase 5** | GameMapService 上线，管理地图数据 |
+| **Phase 6** | 完全替换 GDScript 服务器，Godot 仅保留客户端 |
 
 ## 开发指南
 
@@ -347,13 +429,23 @@ GameBackend/
 docker-compose up -d consul postgresql redis
 
 # 启动单个服务（开发模式）
-dotnet run --project Game.AuthService
+dotnet run --project src/Game.AuthService
 
 # 查看服务注册
 curl http://localhost:8500/v1/agent/services
 
 # 查看 Jaeger 追踪
 浏览器打开: http://localhost:16686
+```
+
+### 数据库迁移
+
+```bash
+# 添加迁移
+dotnet ef migrations add MigrationName --project src/Game.AuthService
+
+# 应用迁移
+dotnet ef database update --project src/Game.AuthService
 ```
 
 ## 注意事项
@@ -363,3 +455,46 @@ curl http://localhost:8500/v1/agent/services
 3. **JWT 认证**: ApiGateway 统一处理认证，下游服务信任网关
 4. **序列化**: 高性能场景使用 MemoryPack，通用场景使用 JSON
 5. **分布式事务**: 当前未实现，跨服务操作需考虑最终一致性
+6. **CORS**: 各服务配置了适当的 CORS 策略以允许跨域请求
+
+## 与 Godot 前端集成
+
+### 聊天微服务集成
+
+在 Godot 项目中启用聊天微服务：
+
+1. **配置启用** - 在 `data/config/master_config.cfg` 中添加：
+```ini
+[chat-service]
+enabled=true
+address="127.0.0.1"
+port=5004
+protocol="http"
+ws_endpoint="/chatHub"
+jwt_key="development-key-for-jwt-signing-change-in-production"
+```
+
+2. **使用聊天管理器**:
+```gdscript
+# 初始化聊天服务
+var chat_manager = ChatServiceManager.get_instance()
+await chat_manager.initialize(player_id, username, display_name)
+
+# 发送消息
+chat_manager.send_message(room_id, "Hello World!", "Text")
+
+# 加入房间
+chat_manager.join_room(1, username)  # 1 = 全局聊天
+
+# 监听消息
+chat_manager.message_received.connect(_on_message_received)
+
+func _on_message_received(message: Dictionary):
+    print("收到消息: %s" % message.text)
+```
+
+3. **数据处理器集成**:
+现有的聊天数据处理器 (`source/server/world/components/data_request_handlers/chat.message.send.gd`) 已自动集成微服务支持，会：
+- 优先使用聊天微服务
+- 微服务不可用时自动降级到本地聊天
+- 保持与现有 UI 和系统的完全兼容

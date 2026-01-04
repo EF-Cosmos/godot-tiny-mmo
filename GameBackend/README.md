@@ -1,404 +1,167 @@
-# C# Game Backend - 微服务架构
+# Tiny MMO Backend Architecture
 
-这是一个基于C#和ASP.NET Core的游戏后端项目，采用微服务架构设计，与Godot前端兼容。该系统集成了Orleans分布式计算框架、MemoryPack高性能序列化库、以及完整的可观测性监控体系。
+这是一个基于微服务架构的多人在线游戏后端系统，采用 **Dockerized .NET Microservices** + **Local Headless Godot Servers** 的混合架构设计。
 
-## 项目结构
+## 🏗️ 整体架构概览
 
-```
-GameBackend/
-├── Game.ApiGateway/           # API网关服务
-├── Game.AuthService/          # 用户认证服务
-├── Game.GameService/          # 游戏逻辑服务
-├── Game.RoomService/          # 房间管理服务
-├── Game.ChatService/          # 聊天服务
-├── Game.Shared/              # 共享代码库
-├── docker/                    # Docker配置文件
-├── GameBackend.sln           # 解决方案文件
-└── README.md                  # 项目说明
-```
+本系统将游戏后端分为两大部分：
+1.  **基础设施与业务微服务**：运行在 Docker 容器中，负责账号、数据持久化、聊天、房间管理等通用业务。
+2.  **游戏逻辑服务器**：运行为 Godot Headless 实例（通常在本地开发环境直接运行），负责物理模拟、实时战斗计算和场景同步。
 
-## 技术栈
+### 架构图
 
-- **ASP.NET Core 10.0** - 微服务框架
-- **Entity Framework Core** - ORM框架
-- **PostgreSQL** - 数据库
-- **Redis** - 缓存和集群
-- **Docker** - 容器化
-- **JWT** - 身份验证
-- **Orleans** - 分布式计算框架
-- **MemoryPack** - 高性能序列化
-- **OpenTelemetry** - 监控和追踪
-- **Kubernetes** - 容器编排
+```mermaid
+graph TD
+    Client[Godot Client]
 
-## 微服务设计
+    subgraph "Docker Infrastructure (Docker Compose)"
+        APIGateway[Ocelot API Gateway\n:5000]
+        Auth[Auth Service\n:5001]
+        Game[Game Service\n:5002]
+        Room[Room Service\n:5003]
+        Chat[Chat Service\n:5004]
+        
+        Consul[Consul\nService Discovery]
+        DB[(PostgreSQL)]
+        Redis[(Redis Cache)]
+    end
 
-### 1. API Gateway (端口 8080)
-- 统一入口点
-- 路由转发
-- 认证授权
-- 限流熔断
-- CORS配置
-- OpenTelemetry监控
+    subgraph "Godot Server Layer (Local Process)"
+        GatewayServer[Godot Gateway Server\n:8088]
+        MasterServer[Godot Master Server\n:8064/8062]
+        WorldServer[Godot World Server\n:8087]
+    end
 
-### 2. Auth Service (端口 5001)
-- 用户注册/登录
-- JWT令牌生成
-- 用户管理
-- 密码加密
-- Orleans集成支持
+    %% Client Connections
+    Client -->|HTTP/REST| APIGateway
+    Client -->|ENet/TCP| GatewayServer
 
-### 3. Game Service (端口 5002)
-- 游戏逻辑管理
-- 游戏状态同步
-- 游戏规则验证
-- MemoryPack序列化
-- Orleans分布式处理
+    %% Internal Docker Comms
+    APIGateway --> Auth
+    APIGateway --> Game
+    APIGateway --> Room
+    APIGateway --> Chat
+    
+    Auth --> DB
+    Chat --> Redis
+    Game --> DB
+    Game --> Redis
 
-### 4. Room Service (端口 5003)
-- 房间创建/管理
-- 玩家加入/离开
-- 房间状态同步
-- Redis缓存支持
+    %% Godot <-> Microservices
+    WorldServer <-->|HTTP/RPC| Game
+    MasterServer <-->|WebSocket| Chat
 
-### 5. Chat Service (端口 8090)
-- **实时聊天**: SignalR WebSocket支持实时通信
-- **消息持久化**: PostgreSQL存储聊天历史
-- **多频道支持**: 全局、交易、公会、私聊等频道
-- **内容过滤**: 自动过滤敏感词汇和垃圾信息
-- **用户管理**: 在线状态跟踪和用户权限管理
-- **高性能缓存**: Redis缓存提升响应速度
-- **OpenTelemetry监控**: 完整的可观测性支持
-
-## 快速开始
-
-### 环境要求
-- .NET 10.0 SDK
-- Docker & Docker Compose
-- PostgreSQL 15+
-- Redis 7+
-- Jaeger (用于追踪) - 可选但推荐
-
-### 使用Docker启动
-
-#### 方式一：启动聊天服务（推荐）
-```bash
-cd GameBackend
-chmod +x start-chat-service.sh
-./start-chat-service.sh
+    %% Godot Internal
+    GatewayServer <-->|ENet| MasterServer
+    WorldServer <-->|ENet| MasterServer
+    GatewayServer -.->|Forward| WorldServer
 ```
 
-#### 方式二：启动全部服务
-```bash
-cd GameBackend
+---
+
+## 🧩 核心组件详解
+
+### 1. 基础设施层 (Docker)
+
+| 服务名称 | 端口 | 描述 |
+| :--- | :--- | :--- |
+| **Consul** | `8500` | 服务注册与发现中心，所有 .NET 微服务启动时自动注册。 |
+| **PostgreSQL** | `5432` | 核心数据库，存储用户账号、角色数据、聊天记录等。 |
+| **Redis** | `6379` | 高速缓存，用于 Session 管理、聊天消息队列、实时状态缓存。 |
+
+### 2. 微服务层 (.NET 8 / Docker)
+
+所有微服务通过 Ocelot API Gateway 统一暴露，内部通过 Consul 发现。
+
+*   **API Gateway (`:5000`)**
+    *   统一入口，处理路由、鉴权、限流。
+    *   将外部 HTTP 请求转发至内部微服务。
+*   **Auth Service (`:5001`)**
+    *   用户注册、登录、JWT Token 签发。
+    *   管理用户 Session。
+*   **Game Service (`:5002`)**
+    *   处理角色创建、物品清单、游戏配置数据。
+    *   与 Godot World Server 交互，持久化玩家数据。
+*   **Room Service (`:5003`)**
+    *   管理副本/房间实例的生命周期。
+    *   处理匹配逻辑。
+*   **Chat Service (`:5004`)**
+    *   基于 SignalR/WebSocket 的实时聊天服务。
+    *   支持世界频道、私聊、系统广播。
+
+### 3. 游戏服务器层 (Godot Headless)
+
+这些服务通常在开发时作为本地进程运行，以便快速调试 GDScript。
+
+*   **Master Server**
+    *   **端口**: `8064` (Gateway Manager), `8062` (World Manager)
+    *   **职责**: 协调中心。管理所有 Gateway 和 World 节点的注册与状态。
+    *   **依赖**: 连接到 Chat Service。
+*   **Gateway Server**
+    *   **端口**: `8088` (Client Connection)
+    *   **职责**: 负载均衡器。玩家首先连接到此服务器，验证 Token 后被转发至合适的 World Server。
+    *   **依赖**: 连接到 Master Server。
+*   **World Server**
+    *   **端口**: `8087` (Game World)
+    *   **职责**: 承载实际游戏地图。处理移动、战斗、物理碰撞等核心逻辑。
+    *   **依赖**: 连接到 Master Server, Game Service, Chat Service。
+
+---
+
+## 🚀 开发环境启动指南
+
+### 第一步：启动后端基础设施
+
+在 `GameBackend` 目录下运行：
+
+```powershell
 docker-compose up -d
 ```
 
-#### 访问服务
-- **聊天服务API**: http://localhost:8090
-- **聊天服务Swagger**: http://localhost:8090/swagger
-- **API网关**: http://localhost:8080/swagger
-- **PostgreSQL**: localhost:5432 (user: postgres, password: password)
-- **Redis**: localhost:6379
-- **Jaeger追踪**: http://localhost:16686
-- **Redis管理**: http://localhost:8081
-- **pgAdmin**: http://localhost:5050
+等待所有容器启动并变为 Healthy 状态。你可以通过 `docker ps` 查看状态。
 
-### 手动启动
+### 第二步：启动 Godot 服务器实例
 
-1. 启动数据库服务
-```bash
-docker run -d --name postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=game_db -p 5432:5432 postgres:15
-docker run -d --name redis -p 6379:6379 redis:7-alpine
+你需要打开 3 个终端窗口（或在 Godot 编辑器中运行 3 个实例），按顺序启动：
+
+1.  **启动 Master Server**
+    ```powershell
+    # 在项目根目录
+    godot --headless source/server/master/master_main.tscn
+    ```
+2.  **启动 Gateway Server**
+    ```powershell
+    godot --headless source/server/gateway/gateway_main.tscn
+    ```
+3.  **启动 World Server**
+    ```powershell
+    godot --headless source/server/world/world_main.tscn
+    ```
+
+### 第三步：启动客户端
+
+运行 Godot 客户端连接本地环境：
+
+```powershell
+godot source/client/client_main.tscn
 ```
 
-2. 启动各个服务
-```bash
-# API Gateway
-cd Game.ApiGateway
-dotnet run
+---
 
-# Auth Service
-cd Game.AuthService
-dotnet run
+## ⚙️ 关键配置说明
 
-# 其他服务同理...
-```
+### 配置文件位置
+*   Godot 配置: `data/config/*.cfg`
+*   Docker 配置: `GameBackend/docker-compose.yml`
 
-## API接口
+### 端口映射表
 
-### 用户认证
-- `POST /api/users/register` - 用户注册
-- `POST /api/users/login` - 用户登录
-- `GET /api/users/{userId}` - 获取用户信息
-- `POST /api/users/validate` - 验证令牌
-
-### 游戏管理
-- `GET /api/games` - 获取所有游戏
-- `GET /api/games/{gameId}` - 获取游戏详情
-- `POST /api/games` - 创建游戏
-- `DELETE /api/games/{gameId}` - 删除游戏
-
-### 房间管理
-- `GET /api/rooms/{roomId}` - 获取房间信息
-- `GET /api/rooms/game/{gameId}` - 获取游戏房间列表
-- `GET /api/rooms/available` - 获取可用房间
-- `POST /api/rooms` - 创建房间
-- `POST /api/rooms/{roomId}/join/{userId}` - 加入房间
-- `POST /api/rooms/{roomId}/leave/{userId}` - 离开房间
-
-### 聊天功能 (Chat Service - 端口 8090)
-- `GET /api/chat/rooms` - 获取所有公开房间
-- `GET /api/chat/rooms/{roomId}/messages` - 获取房间消息历史
-- `POST /api/chat/rooms` - 创建新房间
-- `POST /api/chat/users/{userId}/register` - 注册用户
-- `GET /api/chat/users/{userId}` - 获取用户信息
-- `PUT /api/chat/users/{userId}/status` - 更新用户状态
-- `GET /health` - 健康检查
-
-#### WebSocket事件 (SignalR Hub: /chatHub)
-**客户端 → 服务器**:
-- `JoinRoom(roomId, username)` - 加入房间
-- `LeaveRoom(roomId)` - 离开房间
-- `SendMessage(roomId, content, messageType)` - 发送消息
-- `SendPrivateMessage(recipientId, content)` - 发送私聊
-- `GetOnlineUsers(roomId)` - 获取在线用户
-
-**服务器 → 客户端**:
-- `ReceiveMessage(message)` - 接收消息
-- `ReceivePrivateMessage(message)` - 接收私聊
-- `UserJoined(userInfo)` - 用户加入房间
-- `UserLeft(userInfo)` - 用户离开房间
-- `OnlineUsers(users)` - 在线用户列表更新
-
-## 配置说明
-
-### JWT配置
-在 `appsettings.json` 中配置JWT相关参数：
-```json
-{
-  "Jwt": {
-    "Issuer": "game-backend",
-    "Audience": "game-clients",
-    "Key": "your-super-secret-jwt-key"
-  }
-}
-```
-
-### 服务配置
-在 `appsettings.json` 中配置各个微服务的地址：
-```json
-{
-  "Services": {
-    "Auth": { "Url": "http://localhost:5001" },
-    "Game": { "Url": "http://localhost:5002" },
-    "Room": { "Url": "http://localhost:5003" },
-    "Chat": { "Url": "http://localhost:5004" }
-  }
-}
-```
-
-### OpenTelemetry配置
-在 `appsettings.json` 中配置OpenTelemetry相关参数：
-```json
-{
-  "OpenTelemetry": {
-    "Tracing": {
-      "Endpoint": "http://localhost:14268/api/traces",
-      "ExportProcessorType": "Batch"
-    },
-    "Metrics": {
-      "Endpoint": "http://localhost:9090"
-    }
-  }
-}
-```
-
-## 开发指南
-
-### 添加新的微服务
-
-1. 创建新的Web API项目
-2. 添加对 `Game.Shared` 的引用
-3. 实现相应的接口
-4. 在API网关中添加路由
-5. 更新docker-compose配置
-
-### 数据库迁移
-
-```bash
-# 添加迁移
-dotnet ef migrations add MigrationName --context ApplicationDbContext
-
-# 应用迁移
-dotnet ef database update --context ApplicationDbContext
-```
-
-### 测试
-
-```bash
-# 运行单元测试
-dotnet test
-
-# 运行集成测试
-dotnet test --filter "Category=Integration"
-```
-
-## 部署
-
-### Docker部署
-```bash
-# 构建镜像
-docker-compose build
-
-# 启动服务
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f
-```
-
-### Kubernetes部署 (建议)
-- 使用Helm Charts或Kubernetes YAML文件
-- 部署Orleans Silo集群
-- 部署现有微服务
-- 配置服务发现和负载均衡
-
-### 生产环境配置
-1. 修改JWT密钥
-2. 配置HTTPS
-3. 设置数据库连接字符串
-4. 配置日志级别
-5. 启用性能监控
-6. 配置Jaeger追踪
-7. 配置Prometheus指标收集
-
-## 与Godot前端集成
-
-### 聊天微服务集成
-
-在Godot项目中启用聊天微服务：
-
-1. **配置启用** - 在 `data/config/master_config.cfg` 中添加：
-```ini
-[chat-service]
-enabled=true
-address="127.0.0.1"
-port=8090
-protocol="http"
-ws_endpoint="/chatHub"
-jwt_key="development-key-for-jwt-signing-change-in-production"
-```
-
-2. **使用聊天管理器**:
-```gdscript
-# 初始化聊天服务
-var chat_manager = ChatServiceManager.get_instance()
-await chat_manager.initialize(player_id, username, display_name)
-
-# 发送消息
-chat_manager.send_message(room_id, "Hello World!", "Text")
-
-# 加入房间
-chat_manager.join_room(1, username)  # 1 = 全局聊天
-
-# 监听消息
-chat_manager.message_received.connect(_on_message_received)
-
-func _on_message_received(message: Dictionary):
-    print("收到消息: %s" % message.text)
-```
-
-3. **数据处理器集成**:
-现有的聊天数据处理器 (`chat.message.send.gd`) 已自动集成微服务支持，会：
-- 优先使用聊天微服务
-- 微服务不可用时自动降级到本地聊天
-- 保持与现有UI和系统的完全兼容
-
-### 传统API集成
-
-Godot客户端也可以直接通过HTTP请求与后端通信：
-
-```gdscript
-# 用户登录示例
-func login(username: String, password: String):
-    var url = "http://localhost:8080/api/users/login"
-    var headers = ["Content-Type: application/json"]
-    var data = JSON.stringify({"username": username, "password": password})
-
-    $HTTPClient.request(Method.POST, url, headers, data)
-
-# 聊天服务用户注册
-func register_chat_user(user_id: int, username: String):
-    var url = "http://localhost:8090/api/chat/users/%d/register" % user_id
-    var headers = ["Content-Type: application/json", "Authorization: Bearer YOUR_TOKEN"]
-    var data = JSON.stringify({"username": username, "email": ""})
-
-    $HTTPClient.request(Method.POST, url, headers, data)
-
-# 获取聊天历史
-func get_chat_history(room_id: int):
-    var url = "http://localhost:8090/api/chat/rooms/%d/messages?limit=50" % room_id
-    var headers = ["Authorization: Bearer YOUR_TOKEN"]
-
-    $HTTPClient.request(Method.GET, url, headers, "")
-```
-
-### WebSocket客户端示例
-
-```gdscript
-extends Node
-
-var websocket: WebSocketPeer
-
-func _ready():
-    connect_to_chat_service()
-
-func connect_to_chat_service():
-    websocket = WebSocketPeer.new()
-    var url = "ws://localhost:8090/chatHub"
-    var headers = ["Authorization: Bearer YOUR_TOKEN"]
-
-    var error = websocket.connect_to_url(url, headers)
-    if error != OK:
-        print("WebSocket连接失败: %d" % error)
-
-func _process(_delta):
-    websocket.poll()
-
-    while websocket.get_ready_state() == WebSocketPeer.STATE_OPEN:
-        var packet = websocket.get_packet()
-        if packet.size() > 0:
-            handle_websocket_message(packet)
-
-func send_chat_message(room_id: int, content: String):
-    if websocket.get_ready_state() == WebSocketPeer.STATE_OPEN:
-        var message = {
-            "type": "SendMessage",
-            "arguments": [{"roomId": room_id, "content": content}]
-        }
-        websocket.send_text(JSON.stringify(message))
-
-func handle_websocket_message(packet: PackedByteArray):
-    var message_string = packet.get_string_from_utf8()
-    var json = JSON.new()
-    json.parse(message_string)
-
-    var message_data = json.data
-    print("收到WebSocket消息: %s" % message_data)
-```
-
-## 贡献指南
-
-1. Fork项目
-2. 创建功能分支
-3. 提交更改
-4. 推送到分支
-5. 创建Pull Request
-
-## 许可证
-
-MIT License
-
-## 支持
-
-如有问题，请创建Issue或联系开发团队。
+| 服务 | 宿主机端口 | 容器/内部端口 | 说明 |
+| :--- | :--- | :--- | :--- |
+| **API Gateway** | 5000 | 8080 | HTTP API 入口 |
+| **Auth Service** | 5001 | 8080 | 认证服务 |
+| **Game Service** | 5002 | 8080 | 游戏数据服务 |
+| **Room Service** | 5003 | 8080 | 房间服务 |
+| **Chat Service** | 5004 | 8080 | 聊天服务 |
+| **Godot Gateway**| 8088 | 8088 | 游戏客户端连接端口 |
+| **Godot World** | 8087 | 8087 | 游戏逻辑端口 |
