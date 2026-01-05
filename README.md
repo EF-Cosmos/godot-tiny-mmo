@@ -1,5 +1,7 @@
 > [!NOTE]
 > 项目文档网站: [**ef-cosmos.github.io/godot-tiny-mmo/**](https://ef-cosmos.github.io/godot-tiny-mmo/)
+> 
+> 项目演示文稿: [**演示幻灯片**](https://ef-cosmos.github.io/godot-tiny-mmo/)
 
 [![Godot Engine](https://img.shields.io/badge/Godot-4.5+-blue?logo=godot-engine)](https://godotengine.org/)
 [![.NET](https://img.shields.io/badge/.NET-10.0-purple.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
