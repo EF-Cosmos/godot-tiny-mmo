@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Godot Tiny MMO - 项目演示文稿</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #030508;
+      --bg-mid: #071020;
+      --cyan-glow: #00F0FF;
+      --cyan-dim: #00A8B3;
+      --vivid-violet: #A855F7;
+      --magenta-hot: #FF006E;
+      --electric-blue: #3B82F6;
+      --text-bright: #F0F4F8;
+      --text-muted: #64748B;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg-deep);
+      font-family: 'Rajdhani', sans-serif;
+      color: var(--text-bright);
+      min-height: 100vh;
+      padding: 2rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Background Effects */
+    .bg-gradient {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 60%, rgba(168, 85, 247, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse 100% 80% at 50% 100%, rgba(0, 240, 255, 0.08) 0%, transparent 40%);
+      z-index: -1;
+    }
+
+    .hex-grid {
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%2300F0FF' fill-opacity='0.03'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      opacity: 0.4;
+      z-index: -1;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 3rem;
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--cyan-glow), var(--vivid-violet));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      margin-bottom: 3rem;
+    }
+
+    .slides-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+
+    .slide-card {
+      background: rgba(7, 16, 32, 0.6);
+      border: 1px solid rgba(0, 240, 255, 0.2);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .slide-card:hover {
+      border-color: var(--cyan-glow);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+      transform: translateY(-5px);
+    }
+
+    .slide-card h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: var(--cyan-glow);
+    }
+
+    .slide-card p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .section {
+      margin-bottom: 3rem;
+    }
+
+    .section-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      color: var(--vivid-violet);
+      border-left: 4px solid var(--cyan-glow);
+      padding-left: 1rem;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 2rem;
+      padding: 0.8rem 1.5rem;
+      background: rgba(0, 240, 255, 0.1);
+      border: 1px solid var(--cyan-glow);
+      border-radius: 8px;
+      color: var(--cyan-glow);
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .back-link:hover {
+      background: rgba(0, 240, 255, 0.2);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-gradient"></div>
+  <div class="hex-grid"></div>
+  
+  <div class="container">
+    <h1>GODOT TINY MMO</h1>
+    <p class="subtitle">项目演示文稿与架构说明</p>
+
+    <div class="section">
+      <h3 class="section-title">主题演示文稿</h3>
+      <div class="slides-grid">
+        <a href="slide01.html" class="slide-card">
+          <h2>幻灯片 01</h2>
+          <p>GODOT TINY MMO - 项目标题页</p>
+        </a>
+        <a href="slide02.html" class="slide-card">
+          <h2>幻灯片 02</h2>
+          <p>项目介绍与核心特性</p>
+        </a>
+        <a href="slide03.html" class="slide-card">
+          <h2>幻灯片 03</h2>
+          <p>技术架构概述</p>
+        </a>
+        <a href="slide04.html" class="slide-card">
+          <h2>幻灯片 04</h2>
+          <p>网络架构与通信</p>
+        </a>
+        <a href="slide05.html" class="slide-card">
+          <h2>幻灯片 05</h2>
+          <p>游戏功能展示</p>
+        </a>
+        <a href="slide06.html" class="slide-card">
+          <h2>幻灯片 06</h2>
+          <p>微服务后端架构</p>
+        </a>
+        <a href="slide07.html" class="slide-card">
+          <h2>幻灯片 07</h2>
+          <p>开发路线图与未来规划</p>
+        </a>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3 class="section-title">架构文档</h3>
+      <div class="slides-grid">
+        <a href="architecture.html" class="slide-card">
+          <h2>系统架构</h2>
+          <p>完整的系统架构设计与技术栈说明</p>
+        </a>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3 class="section-title">扩展演示</h3>
+      <div class="slides-grid">
+        <a href="godot-mmo-ppt/slides/slide1.html" class="slide-card">
+          <h2>详细演示集</h2>
+          <p>包含更多技术细节的完整演示文稿系列</p>
+        </a>
+      </div>
+    </div>
+
+    <a href="../" class="back-link">← 返回项目主页</a>
+  </div>
+</body>
+</html>
