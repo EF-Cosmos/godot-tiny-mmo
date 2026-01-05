@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Godot Tiny MMO - Architecture Presentation</title>
+    <style>
+        :root { --bg: #121212; --surface: #1E1E1E; --primary: #47E0A0; --text: #FFFFFF; --text-dim: #B0B0B0; --surface-hover: #2A2A2A; }
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Roboto, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+        .bg-img { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: url('godot-mmo-ppt/slides/images/background.jpg') center/cover; opacity: 0.08; z-index: -1; pointer-events: none; }
+
+        /* Header */
+        header { text-align: center; padding: 60px 20px 40px 20px; }
+        .logo { width: 80px; margin-bottom: 20px; opacity: 0.9; }
+        h1 { font-size: 48px; margin: 0; color: var(--text); letter-spacing: -1px; text-transform: uppercase; font-weight: 700; }
+        h1 span { color: var(--primary); }
+        .subtitle { font-size: 18px; margin: 15px 0 0 0; color: var(--text-dim); font-weight: 300; letter-spacing: 1px; }
+
+        /* Main Content */
+        main { flex: 1; max-width: 1200px; margin: 0 auto; padding: 20px 40px 60px 40px; width: 100%; }
+
+        .slides-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+
+        .slide-card {
+            background: var(--surface);
+            border: 1px solid #2A2A2A;
+            border-radius: 8px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .slide-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--primary);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .slide-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(71, 224, 160, 0.15);
+        }
+        .slide-card:hover::before { opacity: 1; }
+
+        .slide-number {
+            font-size: 12px;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .slide-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            color: var(--text);
+        }
+        .slide-desc {
+            font-size: 14px;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+
+        /* Special Cards */
+        .card-architecture { border-color: #47E0A0; background: linear-gradient(135deg, var(--surface) 0%, rgba(71, 224, 160, 0.05) 100%); }
+        .card-architecture::before { opacity: 1; }
+
+        /* Footer */
+        footer { text-align: center; padding: 30px 20px; border-top: 1px solid #2A2A2A; }
+        .footer-content { display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; }
+        .footer-link { color: var(--text-dim); text-decoration: none; font-size: 14px; transition: color 0.3s ease; }
+        .footer-link:hover { color: var(--primary); }
+        .footer-copy { margin-top: 15px; font-size: 12px; color: #555; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 { font-size: 32px; }
+            .slides-grid { grid-template-columns: 1fr; }
+            main { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-img"></div>
+
+    <header>
+        <img src="godot-mmo-ppt/slides/images/logo.png" class="logo" alt="Godot Logo">
+        <h1>Godot <span>Tiny MMO</span></h1>
+        <div class="subtitle">微服务架构迁移策略与实践</div>
+    </header>
+
+    <main>
+        <div class="slides-grid">
+            <a href="architecture.html" class="slide-card card-architecture">
+                <div class="slide-number">Overview</div>
+                <div class="slide-title">架构总览</div>
+                <div class="slide-desc">完整的微服务架构设计与组件关系图</div>
+            </a>
+
+            <a href="slide1.html" class="slide-card">
+                <div class="slide-number">Slide 01</div>
+                <div class="slide-title">封面</div>
+                <div class="slide-desc">项目介绍与技术栈概览</div>
+            </a>
+
+            <a href="slide2.html" class="slide-card">
+                <div class="slide-number">Slide 02</div>
+                <div class="slide-title">背景与动机</div>
+                <div class="slide-desc">GDScript 服务器的局限性与迁移需求</div>
+            </a>
+
+            <a href="slide3.html" class="slide-card">
+                <div class="slide-number">Slide 03</div>
+                <div class="slide-title">混合架构设计</div>
+                <div class="slide-desc">Docker 后端 + Godot 游戏服务器</div>
+            </a>
+
+            <a href="slide4.html" class="slide-card">
+                <div class="slide-number">Slide 04</div>
+                <div class="slide-title">微服务拆分</div>
+                <div class="slide-desc">Auth / Game / Room / Chat 服务职责</div>
+            </a>
+
+            <a href="slide5.html" class="slide-card">
+                <div class="slide-number">Slide 05</div>
+                <div class="slide-title">服务发现与通信</div>
+                <div class="slide-desc">Consul + Ocelot 网关路由</div>
+            </a>
+
+            <a href="slide6.html" class="slide-card">
+                <div class="slide-number">Slide 06</div>
+                <div class="slide-title">数据层设计</div>
+                <div class="slide-desc">PostgreSQL + Redis 持久化方案</div>
+            </a>
+
+            <a href="slide7.html" class="slide-card">
+                <div class="slide-number">Slide 07</div>
+                <div class="slide-title">认证流程</div>
+                <div class="slide-desc">JWT + 游客登录的完整链路</div>
+            </a>
+
+            <a href="slide8.html" class="slide-card">
+                <div class="slide-number">Slide 08</div>
+                <div class="slide-title">聊天服务集成</div>
+                <div class="slide-desc">SignalR 实时通信与 Godot 集成</div>
+            </a>
+
+            <a href="slide9.html" class="slide-card">
+                <div class="slide-number">Slide 09</div>
+                <div class="slide-title">部署与扩展</div>
+                <div class="slide-desc">Docker Compose / Kubernetes 编排</div>
+            </a>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <a href="https://github.com" class="footer-link">GitHub Repository</a>
+            <a href="README.md" class="footer-link">Documentation</a>
+            <a href="presentation_script.md" class="footer-link">Presentation Script</a>
+        </div>
+        <div class="footer-copy">Godot Tiny MMO Architecture Presentation 2025</div>
+    </footer>
+</body>
+</html>
