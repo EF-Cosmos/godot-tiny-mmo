@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Slide 6</title>
+    <style>
+        :root { --bg: #121212; --surface: #1E1E1E; --primary: #47E0A0; --text: #FFFFFF; --text-dim: #B0B0B0; }
+        body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; width: 1280px; height: 720px; }
+        .slide-container { padding: 60px 80px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+        h2 { font-size: 42px; margin: 0 0 40px 0; color: var(--text); border-left: 6px solid var(--primary); padding-left: 30px; }
+        
+        .content-split { display: flex; gap: 50px; height: 100%; }
+        .text-col { flex: 1; }
+        .code-col { flex: 1.2; display: flex; flex-direction: column; gap: 30px; }
+        
+        .feature-item { margin-bottom: 30px; }
+        .feature-title { color: var(--primary); font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+        .feature-desc { color: var(--text-dim); font-size: 20px; line-height: 1.5; }
+        
+        .code-window { background: #1e1e1e; border-radius: 8px; border: 1px solid #333; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .window-header { background: #252525; padding: 8px 15px; display: flex; gap: 6px; border-bottom: 1px solid #333; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot.red { background: #ff5f56; } .dot.yellow { background: #ffbd2e; } .dot.green { background: #27c93f; }
+        
+        .code-content { padding: 20px; font-family: 'Consolas', 'Monaco', monospace; font-size: 16px; line-height: 1.5; color: #d4d4d4; }
+        .k { color: #569cd6; } /* keyword */
+        .s { color: #ce9178; } /* string */
+        .f { color: #dcdcaa; } /* function */
+        .c { color: #6a9955; } /* comment */
+        .v { color: #9cdcfe; } /* variable */
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <h2>核心技术亮点 (Core Tech)</h2>
+        
+        <div class="content-split">
+            <div class="text-col">
+                <div class="feature-item">
+                    <div class="feature-title">自定义网络协议</div>
+                    <div class="feature-desc">基于 PackedByteArray 的高效字节打包，大幅减少网络开销。</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-title">StateSynchronizer</div>
+                    <div class="feature-desc">基线(Baseline) + 增量(Delta) 同步机制，仅传输变化数据，节省带宽。</div>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-title">异步请求模式</div>
+                    <div class="feature-desc">类似 RPC 的 Request-Response 模式，支持 Lambda 回调处理。</div>
+                </div>
+            </div>
+            
+            <div class="code-col">
+                <div class="code-window">
+                    <div class="window-header"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div></div>
+                    <div class="code-content">
+                        <span class="c"># Data Request Pattern</span><br>
+                        <span class="k">func</span> _on_inventory_opened():<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;InstanceClient.<span class="f">request_data</span>(<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="s">"inventory.get"</span>, <br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">func</span>(response):<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;update_ui(response.items)<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;)<br>
+                        <br>
+                        <span class="c"># Event Subscription</span><br>
+                        InstanceClient.<span class="f">subscribe</span>(<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="s">"chat.message.send"</span>, <br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;self._on_message_received<br>
+                        )
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

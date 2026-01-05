@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Slide 3</title>
+    <style>
+        :root { --bg: #121212; --surface: #1E1E1E; --primary: #47E0A0; --text: #FFFFFF; --text-dim: #B0B0B0; }
+        body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; width: 1280px; height: 720px; }
+        .slide-container { padding: 60px 80px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+        h2 { font-size: 42px; margin: 0 0 30px 0; color: var(--text); display: flex; justify-content: space-between; align-items: flex-end; }
+        .subtitle { font-size: 20px; color: var(--text-dim); font-weight: normal; }
+        .diagram-container { flex: 1; background: var(--surface); border-radius: 8px; padding: 20px; display: flex; justify-content: center; align-items: center; border: 1px solid #333; position: relative; }
+        /* Mermaid specific overrides for dark theme */
+        .mermaid { width: 100%; height: 100%; display: flex; justify-content: center; }
+        .legend { position: absolute; bottom: 30px; right: 30px; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 4px; border: 1px solid #444; }
+        .legend-item { display: flex; align-items: center; margin: 5px 0; font-size: 14px; color: #ccc; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; }
+    </style>
+    <!-- Use a reliable CDN for Mermaid -->
+    <script type="module">
+        import mermaid from 'https://lib.baomitu.com/mermaid/10.9.0/mermaid.esm.min.mjs';
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'dark',
+            themeVariables: {
+                primaryColor: '#1E1E1E',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#47E0A0',
+                lineColor: '#47E0A0',
+                secondaryColor: '#1E1E1E',
+                tertiaryColor: '#1E1E1E'
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="slide-container">
+        <h2>整体架构概览 <span class="subtitle">Hybrid Architecture: Godot + .NET</span></h2>
+        
+        <div class="diagram-container">
+            <div class="mermaid">
+            graph TD
+                Client[Godot Client] -->|WebSocket| GatewayServer[Gateway Server :8088]
+                Client -->|HTTP/REST| APIGateway[API Gateway :5000]
+                
+                subgraph GodotCluster [Godot Headless Cluster]
+                    direction TB
+                    GatewayServer -->|ENet| MasterServer[Master Server]
+                    MasterServer -->|ENet| WorldServer[World Server]
+                end
+                
+                subgraph DotNetServices [.NET Core Microservices]
+                    direction TB
+                    APIGateway --> Auth[Auth Service]
+                    APIGateway --> Chat[Chat Service]
+                    APIGateway --> Game[Game Service]
+                    APIGateway --> Room[Room Service]
+                end
+                
+                MasterServer -.->|HTTP/JSON| APIGateway
+                
+                style Client fill:#333,stroke:#47E0A0,stroke-width:2px,color:#fff
+                style GatewayServer fill:#1E1E1E,stroke:#47E0A0,stroke-width:1px,color:#fff
+                style MasterServer fill:#1E1E1E,stroke:#47E0A0,stroke-width:1px,color:#fff
+                style WorldServer fill:#1E1E1E,stroke:#47E0A0,stroke-width:1px,color:#fff
+                style APIGateway fill:#2D2D2D,stroke:#5c9eff,stroke-width:1px,color:#fff
+                style Auth fill:#2D2D2D,stroke:#5c9eff,stroke-width:1px,color:#fff
+                style Chat fill:#2D2D2D,stroke:#5c9eff,stroke-width:1px,color:#fff
+                style Game fill:#2D2D2D,stroke:#5c9eff,stroke-width:1px,color:#fff
+                style Room fill:#2D2D2D,stroke:#5c9eff,stroke-width:1px,color:#fff
+                
+                linkStyle default stroke:#666,stroke-width:2px
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item"><div class="dot" style="background:#1E1E1E; border:1px solid #47E0A0"></div> Godot (GDScript)</div>
+                <div class="legend-item"><div class="dot" style="background:#2D2D2D; border:1px solid #5c9eff"></div> Microservice (.NET)</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

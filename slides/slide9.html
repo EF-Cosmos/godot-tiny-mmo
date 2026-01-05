@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Slide 9</title>
+    <style>
+        :root { --bg: #121212; --surface: #1E1E1E; --primary: #47E0A0; --text: #FFFFFF; --text-dim: #B0B0B0; }
+        body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; width: 1280px; height: 720px; }
+        .slide-container { padding: 60px 80px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+        h2 { font-size: 42px; margin: 0 0 40px 0; color: var(--text); border-left: 6px solid var(--primary); padding-left: 30px; }
+        
+        .terminal { background: #000; border-radius: 8px; border: 1px solid #333; font-family: 'Consolas', monospace; padding: 20px; flex: 1; display: flex; flex-direction: column; }
+        .term-line { color: #ccc; font-size: 20px; margin-bottom: 15px; display: flex; }
+        .prompt { color: var(--primary); margin-right: 15px; user-select: none; }
+        .cmd { color: #fff; }
+        .output { color: #888; font-size: 18px; margin-left: 20px; margin-bottom: 25px; display: block; }
+        
+        .access-info { margin-top: 30px; display: flex; gap: 30px; }
+        .access-item { background: var(--surface); padding: 15px 25px; border-radius: 4px; border: 1px solid #333; }
+        .access-label { color: var(--text-dim); font-size: 14px; display: block; margin-bottom: 5px; }
+        .access-url { color: var(--primary); font-family: monospace; font-size: 18px; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <h2>开发与部署 (Dev & Deployment)</h2>
+        
+        <div class="terminal">
+            <div class="term-line">
+                <span class="prompt">user@dev:~/GodotMMO$</span>
+                <span class="cmd">cd GameBackend && docker-compose up -d</span>
+            </div>
+            <div class="output">
+                Creating network "mmo_net" with driver "bridge"<br>
+                Starting consul ... done<br>
+                Starting postgres ... done<br>
+                Starting redis ... done
+            </div>
+            
+            <div class="term-line">
+                <span class="prompt">user@dev:~/GodotMMO$</span>
+                <span class="cmd">godot --headless --server</span>
+            </div>
+            <div class="output">
+                Godot Engine v4.5.stable.official - Server Mode<br>
+                Gateway listening on :8088<br>
+                Master listening on :8064
+            </div>
+
+            <div class="term-line">
+                <span class="prompt">user@dev:~/GodotMMO$</span>
+                <span class="cmd">godot source/client/client_main.tscn</span>
+            </div>
+            <div class="output">
+                Client connected to Gateway. Ready.
+            </div>
+        </div>
+        
+        <div class="access-info">
+            <div class="access-item">
+                <span class="access-label">API Gateway</span>
+                <span class="access-url">http://localhost:5000</span>
+            </div>
+            <div class="access-item">
+                <span class="access-label">Consul UI</span>
+                <span class="access-url">http://localhost:8500</span>
+            </div>
+            <div class="access-item">
+                <span class="access-label">Jaeger Tracing</span>
+                <span class="access-url">http://localhost:16686</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
