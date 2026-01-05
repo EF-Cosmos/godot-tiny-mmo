@@ -1,0 +1,39 @@
+<h2 class="slide-title">游戏服务器层 (Game Server Layer)</h2>
+<div class="content-split">
+    <div class="server-list">
+        <div class="server-item active">
+            <span class="server-name">Gateway Server <span class="server-port-tag">:8088</span></span>
+            <div class="server-desc">客户端连接入口，处理连接保持与初级负载均衡。</div>
+        </div>
+        <div class="server-item">
+            <span class="server-name">Master Server <span class="server-port-tag">:8064</span></span>
+            <div class="server-desc">中央协调器，管理所有 World 节点状态与玩家路由。</div>
+        </div>
+        <div class="server-item">
+            <span class="server-name">World Server <span class="server-port-tag">:8087</span></span>
+            <div class="server-desc">承载实际游戏逻辑、物理模拟与状态同步。</div>
+        </div>
+    </div>
+    <div class="diagram-container">
+        <div class="mermaid">
+            graph LR
+                Client((Player)) -->|WS/ENet| GW[Gateway]
+                GW -->|ENet| MS[Master]
+                MS -->|Coordination| W1[World 1]
+                MS -->|Coordination| W2[World 2]
+
+                subgraph Instance [World Instance]
+                    W1 -->|Physics| W1
+                    W1 -->|Logic| W1
+                end
+
+                style Client fill:#333,stroke:#fff
+                style GW fill:#1E1E1E,stroke:#47E0A0,stroke-width:2px
+                style MS fill:#1E1E1E,stroke:#47E0A0,stroke-width:2px
+                style W1 fill:#1E1E1E,stroke:#47E0A0,stroke-width:2px
+                style W2 fill:#1E1E1E,stroke:#47E0A0,stroke-width:2px
+
+                linkStyle default stroke:#666,stroke-width:2px
+        </div>
+    </div>
+</div>

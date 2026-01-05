@@ -1,0 +1,36 @@
+<h2 class="slide-title">整体架构概览</h2>
+<div class="diagram-container">
+    <div class="mermaid">
+        graph TD
+            Client[Godot Client] -->|WebSocket| GatewayServer[Gateway Server :8088]
+            Client -->|HTTP/REST| APIGateway[API Gateway :5000]
+
+            subgraph GodotCluster [Godot Headless Cluster]
+                direction TB
+                GatewayServer -->|ENet| MasterServer[Master Server]
+                MasterServer -->|ENet| WorldServer[World Server]
+            end
+
+            subgraph DotNetServices [.NET Core Microservices]
+                direction TB
+                APIGateway --> Auth[Auth Service]
+                APIGateway --> Chat[Chat Service]
+                APIGateway --> Game[Game Service]
+                APIGateway --> Room[Room Service]
+            end
+
+            MasterServer -.->|HTTP/JSON| APIGateway
+
+            style Client fill:#333,stroke:#47E0A0,stroke-width:2px,color:#fff
+            style GatewayServer fill:#1E1E1E,stroke:#47E0A0,stroke-width:1px,color:#fff
+            style MasterServer fill:#1E1E1E,stroke:#47E0A0,stroke-width:1px,color:#fff
+            style WorldServer fill:#1E1E1E,stroke:#47E0A0,stroke-width:1px,color:#fff
+            style APIGateway fill:#2D2D2D,stroke:#5c9eff,stroke-width:1px,color:#fff
+            style Auth fill:#2D2D2D,stroke:#5c9eff,stroke-width:1px,color:#fff
+            style Chat fill:#2D2D2D,stroke:#5c9eff,stroke-width:1px,color:#fff
+            style Game fill:#2D2D2D,stroke:#5c9eff,stroke-width:1px,color:#fff
+            style Room fill:#2D2D2D,stroke:#5c9eff,stroke-width:1px,color:#fff
+
+            linkStyle default stroke:#666,stroke-width:2px
+    </div>
+</div>

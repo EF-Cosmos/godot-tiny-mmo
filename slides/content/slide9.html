@@ -1,0 +1,43 @@
+<h2 class="slide-title">开发与部署 (Dev & Deployment)</h2>
+<div class="terminal">
+    <div class="term-line">
+        <span class="prompt">user@dev:~/GodotMMO$</span>
+        <span class="cmd">cd GameBackend && docker-compose up -d</span>
+    </div>
+    <div class="output">
+        Creating network "mmo_net" with driver "bridge"<br>
+        Starting consul ... done<br>
+        Starting postgres ... done<br>
+        Starting redis ... done
+    </div>
+    <div class="term-line">
+        <span class="prompt">user@dev:~/GodotMMO$</span>
+        <span class="cmd">godot --headless --server</span>
+    </div>
+    <div class="output">
+        Godot Engine v4.5.stable.official - Server Mode<br>
+        Gateway listening on :8088<br>
+        Master listening on :8064
+    </div>
+    <div class="term-line">
+        <span class="prompt">user@dev:~/GodotMMO$</span>
+        <span class="cmd">godot source/client/client_main.tscn</span>
+    </div>
+    <div class="output">
+        Client connected to Gateway. Ready.
+    </div>
+</div>
+<div class="access-info">
+    <div class="access-item">
+        <span class="access-label">API Gateway</span>
+        <span class="access-url">http://localhost:5000</span>
+    </div>
+    <div class="access-item">
+        <span class="access-label">Consul UI</span>
+        <span class="access-url">http://localhost:8500</span>
+    </div>
+    <div class="access-item">
+        <span class="access-label">Jaeger Tracing</span>
+        <span class="access-url">http://localhost:16686</span>
+    </div>
+</div>

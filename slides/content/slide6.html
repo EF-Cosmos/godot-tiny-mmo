@@ -1,0 +1,29 @@
+<h2 class="slide-title">核心技术亮点 (Core Tech)</h2>
+<div class="content-split">
+    <div class="col-card" style="background: transparent; border: none; padding: 0;">
+        <div class="feature-title">自定义网络协议</div>
+        <div class="feature-desc">基于 PackedByteArray 的高效字节打包，大幅减少网络开销。</div>
+        <div class="feature-title">StateSynchronizer</div>
+        <div class="feature-desc">基线(Baseline) + 增量(Delta) 同步机制，仅传输变化数据，节省带宽。</div>
+        <div class="feature-title">异步请求模式</div>
+        <div class="feature-desc">类似 RPC 的 Request-Response 模式，支持 Lambda 回调处理。</div>
+    </div>
+    <div class="code-window">
+        <div class="window-header"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div></div>
+        <div class="code-content">
+            <span class="c"># Data Request Pattern</span><br>
+            <span class="k">func</span> _on_inventory_opened():<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;InstanceClient.<span class="f">request_data</span>(<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="s">"inventory.get"</span>,<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">func</span>(response):<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;update_ui(response.items)<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;)<br>
+            <br>
+            <span class="c"># Event Subscription</span><br>
+            InstanceClient.<span class="f">subscribe</span>(<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;<span class="s">"chat.message.send"</span>,<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;self._on_message_received<br>
+            )
+        </div>
+    </div>
+</div>

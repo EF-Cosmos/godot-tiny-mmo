@@ -1,0 +1,64 @@
+<h2 class="slide-title">微服务矩阵 (Service Matrix)</h2>
+<div class="service-matrix">
+    <div class="service-card">
+        <div class="service-header">
+            <span class="service-name">API Gateway</span>
+            <span class="service-port">:5000</span>
+        </div>
+        <div class="service-desc">
+            • 统一流量入口<br>
+            • 路由转发 (Ocelot)<br>
+            • JWT 鉴权终结
+        </div>
+    </div>
+    <div class="service-card">
+        <div class="service-header">
+            <span class="service-name">Auth Service</span>
+            <span class="service-port">:5001</span>
+        </div>
+        <div class="service-desc">
+            • 用户注册与登录<br>
+            • 令牌 (Token) 管理<br>
+            • 账户安全策略
+        </div>
+    </div>
+    <div class="service-card">
+        <div class="service-header">
+            <span class="service-name">Game Service</span>
+            <span class="service-port">:5002</span>
+        </div>
+        <div class="service-desc">
+            • 角色数据持久化<br>
+            • 游戏规则配置<br>
+            • 物品/背包系统
+        </div>
+    </div>
+    <div class="service-card">
+        <div class="service-header">
+            <span class="service-name">Room Service</span>
+            <span class="service-port">:5003</span>
+        </div>
+        <div class="service-desc">
+            • 房间实例管理<br>
+            • 匹配队列逻辑<br>
+            • 副本生命周期
+        </div>
+    </div>
+    <div class="service-card">
+        <div class="service-header">
+            <span class="service-name">Chat Service</span>
+            <span class="service-port">:5004</span>
+        </div>
+        <div class="service-desc">
+            • 实时聊天 (SignalR)<br>
+            • 频道/私聊管理<br>
+            • 系统广播推送
+        </div>
+    </div>
+</div>
+<div class="infra-bar">
+    <div class="infra-item"><div class="infra-icon">C</div><span class="infra-name">Consul (Service Discovery)</span></div>
+    <div class="infra-item"><div class="infra-icon">P</div><span class="infra-name">PostgreSQL (Data)</span></div>
+    <div class="infra-item"><div class="infra-icon">R</div><span class="infra-name">Redis (Cache)</span></div>
+    <div class="infra-item"><div class="infra-icon">J</div><span class="infra-name">Jaeger (Tracing)</span></div>
+</div>
