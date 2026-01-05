@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Slide 4</title>
+    <style>
+        :root { --bg: #121212; --surface: #1E1E1E; --primary: #47E0A0; --accent: #5c9eff; --text: #FFFFFF; --text-dim: #B0B0B0; }
+        body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; width: 1280px; height: 720px; }
+        .slide-container { padding: 60px 80px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+        h2 { font-size: 42px; margin: 0 0 50px 0; color: var(--text); border-left: 6px solid var(--accent); padding-left: 30px; }
+        
+        .matrix { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; margin-bottom: 40px; }
+        .service-card { background: var(--surface); padding: 25px; border-radius: 6px; border-top: 3px solid var(--accent); transition: transform 0.2s; }
+        .service-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .service-name { color: var(--accent); font-weight: bold; font-size: 22px; }
+        .service-port { background: #333; padding: 2px 8px; border-radius: 4px; font-size: 14px; font-family: monospace; }
+        .service-desc { color: var(--text-dim); font-size: 16px; line-height: 1.5; }
+        
+        .infra-bar { background: #1a1a1a; padding: 20px; border-radius: 6px; display: flex; justify-content: space-around; align-items: center; border: 1px solid #333; margin-top: auto; }
+        .infra-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .infra-icon { width: 32px; height: 32px; background: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--primary); font-weight: bold; }
+        .infra-name { font-size: 16px; color: var(--text-dim); }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <h2>微服务矩阵 (Service Matrix)</h2>
+        
+        <div class="matrix">
+            <div class="service-card">
+                <div class="service-header">
+                    <span class="service-name">API Gateway</span>
+                    <span class="service-port">:5000</span>
+                </div>
+                <div class="service-desc">
+                    • 统一流量入口<br>
+                    • 路由转发 (Ocelot)<br>
+                    • JWT 鉴权终结
+                </div>
+            </div>
+            
+            <div class="service-card">
+                <div class="service-header">
+                    <span class="service-name">Auth Service</span>
+                    <span class="service-port">:5001</span>
+                </div>
+                <div class="service-desc">
+                    • 用户注册与登录<br>
+                    • 令牌 (Token) 管理<br>
+                    • 账户安全策略
+                </div>
+            </div>
+            
+            <div class="service-card">
+                <div class="service-header">
+                    <span class="service-name">Game Service</span>
+                    <span class="service-port">:5002</span>
+                </div>
+                <div class="service-desc">
+                    • 角色数据持久化<br>
+                    • 游戏规则配置<br>
+                    • 物品/背包系统
+                </div>
+            </div>
+            
+            <div class="service-card">
+                <div class="service-header">
+                    <span class="service-name">Room Service</span>
+                    <span class="service-port">:5003</span>
+                </div>
+                <div class="service-desc">
+                    • 房间实例管理<br>
+                    • 匹配队列逻辑<br>
+                    • 副本生命周期
+                </div>
+            </div>
+            
+            <div class="service-card">
+                <div class="service-header">
+                    <span class="service-name">Chat Service</span>
+                    <span class="service-port">:5004</span>
+                </div>
+                <div class="service-desc">
+                    • 实时聊天 (SignalR)<br>
+                    • 频道/私聊管理<br>
+                    • 系统广播推送
+                </div>
+            </div>
+        </div>
+        
+        <div class="infra-bar">
+            <div class="infra-item"><div class="infra-icon">C</div><span class="infra-name">Consul (Service Discovery)</span></div>
+            <div class="infra-item"><div class="infra-icon">P</div><span class="infra-name">PostgreSQL (Data)</span></div>
+            <div class="infra-item"><div class="infra-icon">R</div><span class="infra-name">Redis (Cache)</span></div>
+            <div class="infra-item"><div class="infra-icon">J</div><span class="infra-name">Jaeger (Tracing)</span></div>
+        </div>
+    </div>
+</body>
+</html>

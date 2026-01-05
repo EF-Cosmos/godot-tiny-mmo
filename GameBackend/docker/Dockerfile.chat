@@ -4,15 +4,15 @@ EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY ["Game.ChatService/Game.ChatService.csproj", "Game.ChatService/"]
-COPY ["Game.Shared/Game.Shared.csproj", "Game.Shared/"]
-RUN dotnet restore "Game.ChatService/Game.ChatService.csproj"
+COPY ["src/Game.ChatService/Game.ChatService.csproj", "src/Game.ChatService/"]
+COPY ["shared/Game.Shared/Game.Shared.csproj", "shared/Game.Shared/"]
+RUN dotnet restore "src/Game.ChatService/Game.ChatService.csproj"
 COPY . .
-WORKDIR "/src/Game.ChatService"
-RUN dotnet build "Game.ChatService/Game.ChatService.csproj" -c Release -o /app/build
+WORKDIR "/src/src/Game.ChatService"
+RUN dotnet build "Game.ChatService.csproj" -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "Game.ChatService/Game.ChatService.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "Game.ChatService.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app

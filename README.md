@@ -365,10 +365,11 @@ PUT    /api/chat/users/{id}/status        - 更新用户状态
 
 ## 致谢
 
-感谢所有为本项目做出贡献的人：
+感谢来自项目上游做出贡献的人：
 - **地图** 设计者 [@higaslk](https://github.com/higaslk)
 - 宝贵的帮助和反馈: [@Jackiefrost](https://github.com/Jackietkfrost), [@d-Cadrius](https://github.com/d-Cadrius) 和多位匿名贡献者
 - 原项目作者: [SlayHorizon](https://github.com/SlayHorizon/godot-tiny-mmo)
+
 
 ## 许可证
 

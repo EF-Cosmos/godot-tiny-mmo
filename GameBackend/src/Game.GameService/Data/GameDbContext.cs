@@ -10,10 +10,18 @@ public class GameDbContext : DbContext
     }
 
     public DbSet<PlayerInventoryItem> InventoryItems { get; set; }
+    public DbSet<PlayerCharacter> Characters { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<PlayerCharacter>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.Name).IsUnique();
+        });
 
         modelBuilder.Entity<PlayerInventoryItem>(entity =>
         {
@@ -23,7 +31,7 @@ public class GameDbContext : DbContext
             
             // Index for faster lookups by character and scope
             entity.HasIndex(e => e.CharacterId);
-            entity.HasIndex(e => e.CharacterId, e.Scope);
+            entity.HasIndex(e => new { e.CharacterId, e.Scope });
         });
     }
 }

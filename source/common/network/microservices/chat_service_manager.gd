@@ -1,4 +1,3 @@
-class_name ChatServiceManager
 extends Node
 
 static var instance: ChatServiceManager
@@ -44,8 +43,6 @@ func initialize(player_id: int, username: String, display_name: String = "") -> 
 	# Register user and connect
 	chat_client.register_user(player_id, username, display_name)
 
-	return false
-
 # Send message using microservice (if available) or fallback
 func send_message(room_id: int, content: String, message_type: String = "Text", fallback_callback: Callable = Callable()) -> bool:
 	if chat_client and chat_client.connection_state == ChatServiceClient.ConnectionState.CONNECTED:
@@ -88,7 +85,7 @@ func leave_room(room_id: int, fallback_callback: Callable = Callable()) -> bool:
 		return false
 
 # Get room history
-async func get_room_history(room_id: int, limit: int = 50, before: String = "") -> Array:
+func get_room_history(room_id: int, limit: int = 50, before: String = "") -> Array:
 	if chat_client and chat_client.connection_state == ChatServiceClient.ConnectionState.CONNECTED:
 		return await chat_client.get_room_history(room_id, limit, before)
 	else:
@@ -101,9 +98,9 @@ func poll():
 		chat_client.poll_websocket()
 
 # Disconnect from chat service
-func disconnect():
+func disconnect_service():
 	if chat_client:
-		chat_client.disconnect()
+		chat_client.disconnect_websocket()
 
 # Check if chat service is available
 func is_available() -> bool:

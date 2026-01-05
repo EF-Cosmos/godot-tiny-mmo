@@ -15,60 +15,63 @@ Godot Tiny MMO 是一个实验性开源 MMORPG 框架，基于 Godot 4.5 和 .NE
 
 ## 运行项目
 
-### Godot 原生游戏
+### 混合架构开发环境 (推荐)
 
-1. 在 Godot 4.4 或 4.5 中打开项目
-2. Debug → "Customizable Run Instance..." → 启用 "Multiple Instances" (4+)
-3. 设置 Feature Tags:
-   - 恰好一个 `gateway-server`
-   - 恰好一个 `master-server`
-   - 恰好一个 `world-server`
-   - 一个或多个 `client`
-4. 可选启动参数: `--headless` (服务器), `--config=path.cfg`
-5. 按 F5 运行
+本项目采用 **Docker 后端 + 本地 Godot 进程** 的混合开发模式。
 
-**配置文件** 位于 `data/config/`:
-- `client_config.cfg` - 客户端设置
-- `gateway_config.cfg` - Gateway 服务器设置
-- `master_config.cfg` - Master 服务器设置
-- `world_config.cfg` - World 服务器设置
-
-### GameBackend 微服务
+#### 1. 启动后端基础设施 (Docker)
 
 ```bash
 cd GameBackend
-
-# 启动所有服务（需要 Docker）
 docker-compose up -d
+```
+这将启动 Consul, Postgres, Redis, API Gateway, Auth/Game/Room/Chat Services。
 
-# 或单独运行各个服务
-dotnet run --project src/Game.ApiGateway
-dotnet run --project src/Game.AuthService
-dotnet run --project src/Game.GameService
-dotnet run --project src/Game.RoomService
-dotnet run --project src/Game.ChatService
+#### 2. 启动 Godot 服务器实例 (本地)
+
+需要打开 3 个终端窗口，分别运行以下命令（或在 Godot 编辑器中运行对应场景）：
+
+**Master Server** (协调中心):
+```bash
+godot --headless source/server/master/master_main.tscn
 ```
 
-**服务端口**:
-- **ApiGateway**: `5000`
-- **AuthService**: `5001`
-- **GameService**: `5002`
-- **RoomService**: `5003`
-- **ChatService**: `5004`
-- **Consul**: `8500`
-- **PostgreSQL**: `5432`
-- **Redis**: `6379`
-- **Jaeger**: `16686` (Web UI)
+**Gateway Server** (客户端入口):
+```bash
+godot --headless source/server/gateway/gateway_main.tscn
+```
+
+**World Server** (游戏逻辑):
+```bash
+godot --headless source/server/world/world_main.tscn
+```
+
+#### 3. 启动客户端
+
+```bash
+godot source/client/client_main.tscn
+```
+
+### 配置文件
+
+- **Godot 配置**: `data/config/*.cfg`
+- **Docker 配置**: `GameBackend/docker-compose.yml`
 
 ---
 
 ## 架构
 
-### 三服务器模型 (Godot 原生)
+### 混合架构概览
 
-- **Gateway Server** (`source/server/gateway/`): HTTP REST API 处理认证，路由到 master
-- **Master Server** (`source/server/master/`): 中央协调器，账户数据库，连接 gateway 和 world 服务器
-- **World Server** (`source/server/world/`): 托管游戏实例，10 物理 tick/秒，最多 200 玩家
+- **基础设施层 (Docker)**: 负责通用业务逻辑、数据持久化、服务发现。
+  - **API Gateway (:5000)**: 统一 HTTP 入口。
+  - **Auth Service (:5001)**: 用户认证。
+  - **Game Service (:5002)**: 游戏数据持久化。
+  - **Chat Service (:5004)**: 实时聊天 (SignalR)。
+- **游戏服务器层 (Godot Headless)**: 负责实时游戏逻辑、物理模拟。
+  - **Gateway Server (:8088)**: 处理客户端连接，负载均衡。
+  - **Master Server (:8064)**: 协调 Gateway 和 World，管理注册。
+  - **World Server (:8087)**: 运行实际游戏地图。
 
 ### 目录结构
 
@@ -78,17 +81,19 @@ source/
 │   ├── autoload/    # ClientState 单例
 │   ├── gateway/     # 认证和角色选择 UI
 │   ├── network/     # InstanceClient, WorldClient
+│   │   └── microservices/  # 微服务客户端 (ChatServiceManager)
 │   └── ui/          # HUD、菜单、背包、聊天
 ├── common/          # 客户端+服务器共享代码
 │   ├── gameplay/    # 角色、战斗、物品、地图、时间
 │   ├── network/     # Wire 协议、RPC 端点、状态同步
-│   ├── registry/    # ContentRegistryHub, PathRegistry
-│   └── microservices/  # 微服务客户端 (ChatServiceManager)
+│   └── registry/    # ContentRegistryHub, PathRegistry
 └── server/
-    ├── gateway/     # REST 认证端点
-    ├── master/      # 账户管理、协调
-    └── world/       # 实例管理、游戏逻辑处理
-        └── components/data_request_handlers/  # RPC 处理器
+    ├── gateway/     # Godot Gateway Server (连接入口)
+    ├── master/      # Godot Master Server (协调器)
+    └── world/       # Godot World Server (游戏逻辑)
+GameBackend/         # .NET 微服务后端
+    ├── src/         # 微服务源码
+    └── docker/      # Docker 配置
 ```
 
 ### 状态同步
@@ -129,21 +134,22 @@ source/
 
 ### 认证流程
 
-1. 客户端 → Gateway (HTTP): 在 `/v1/login` 或 `/v1/guest` 登录/游客
-2. Gateway → Master: 获取世界列表、角色数据
-3. Master → Gateway: 生成认证令牌
-4. 客户端 → World Server (WebSocket): 使用令牌连接
-5. World Server 验证令牌，生成玩家
+1. 客户端 → API Gateway (HTTP): 在 `/api/auth/login` 或 `/api/auth/guest` 登录/游客
+2. API Gateway → Auth Service: 验证凭据，返回 JWT Token
+3. 客户端 → Godot Gateway Server (ENet): 使用 Token 连接
+4. Godot Gateway → Master: 验证 Token
+5. Master → Godot Gateway: 返回可用的 World Server 信息
+6. 客户端 → Godot World Server (ENet): 连接并进入游戏
 
 Gateway API 端点定义在 `source/common/network/gateway_api.gd`:
 
 ```
-POST /v1/login              - 用户登录
-POST /v1/guest              - 游客登录
-POST /v1/account/create     - 创建账户
-POST /v1/world/characters   - 获取玩家角色
-POST /v1/world/character/create - 创建角色
-POST /v1/world/enter        - 进入世界
+POST /api/auth/login              - 用户登录
+POST /api/auth/guest              - 游客登录
+POST /api/auth/register           - 创建账户
+POST /api/game/world/characters   - 获取玩家角色
+POST /api/game/world/character/create - 创建角色
+POST /api/game/world/enter        - 进入世界
 ```
 
 ## 核心类
@@ -179,8 +185,7 @@ GameBackend/
 │   ├── Game.AuthService/       # 认证服务
 │   ├── Game.GameService/       # 游戏逻辑服务
 │   ├── Game.RoomService/       # 房间管理服务
-│   ├── Game.ChatService/       # 聊天服务 (SignalR)
-│   └── Game.GameMapService/    # 地图管理服务
+│   └── Game.ChatService/       # 聊天服务 (SignalR)
 ├── shared/
 │   └── Game.Shared/            # 共享代码库
 │       ├── Consul/            # 服务发现实现
@@ -234,7 +239,6 @@ GameBackend/
 - 游戏规则执行
 - 游戏数据持久化
 - 与 Godot World Server 的数据同步
-- Orleans 分布式处理
 
 **关键文件**:
 - `Controllers/` - 游戏逻辑控制器
@@ -249,7 +253,7 @@ GameBackend/
 - 玩家加入/离开房间
 - 房间状态同步
 - 匹配逻辑
-- Redis 缓存支持
+- 内存中服务器管理 (GameServerManager)
 
 **关键文件**:
 - `Controllers/` - 房间管理控制器
@@ -264,22 +268,13 @@ GameBackend/
 - 房间聊天
 - 私聊功能
 - 消息持久化 (PostgreSQL)
-- 在线用户状态管理 (Redis)
+- 在线用户状态管理 (内存/Redis)
 - 多频道支持
 
 **关键文件**:
 - `Hubs/ChatHub.cs` - SignalR Hub
 - `Controllers/ChatController.cs` - REST API
 - `Data/ChatDbContext.cs` - EF Core 数据上下文
-
-### Game.GameMapService
-
-**职责**: 地图数据管理
-
-**核心功能**:
-- 地图数据存储和检索
-- 地图实例管理
-- 与 Godot World Server 的地图同步
 
 ### Game.Shared
 
@@ -303,9 +298,8 @@ GameBackend/
 | **API 网关** | Ocelot 23.4.2 |
 | **服务发现** | Consul 1.15 |
 | **实时通信** | SignalR (ASP.NET Core) |
-| **分布式计算** | Microsoft Orleans 8.2.0 |
 | **数据库** | PostgreSQL 15 + EF Core 10.0 |
-| **缓存** | Redis 7 (StackExchange.Redis) |
+| **缓存** | Redis 7 (StackExchange.Redis) - *可选/部分集成* |
 | **认证** | JWT Bearer |
 | **追踪** | OpenTelemetry + Jaeger |
 | **序列化** | MemoryPack 1.10.0, Newtonsoft.Json |
@@ -409,8 +403,7 @@ GameBackend/
 | **Phase 2** | ChatService 上线，替代原有聊天系统 |
 | **Phase 3** | RoomService 上线，管理游戏实例 |
 | **Phase 4** | GameService 上线，逐步迁移游戏逻辑 |
-| **Phase 5** | GameMapService 上线，管理地图数据 |
-| **Phase 6** | 完全替换 GDScript 服务器，Godot 仅保留客户端 |
+| **Phase 5** | 完全替换 GDScript 服务器，Godot 仅保留客户端 |
 
 ## 开发指南
 

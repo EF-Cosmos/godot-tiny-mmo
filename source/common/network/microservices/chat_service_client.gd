@@ -45,8 +45,7 @@ func _process(_delta: float) -> void:
 		
 		while websocket_client.get_available_packet_count():
 			var packet = websocket_client.get_packet()
-			var message = packet.get_string_from_utf8()
-			_handle_websocket_message(message)
+			_handle_websocket_message(packet)
 			
 	elif state == WebSocketPeer.STATE_CLOSED:
 		if connection_state == ConnectionState.CONNECTED:
@@ -123,45 +122,6 @@ func connect_websocket() -> void:
 	else:
 		connection_failed.emit("Failed to connect")
 
-func _handle_websocket_message(message: String) -> void:
-	# SignalR messages are JSON.
-	# They end with 0x1E (Record Separator).
-	# We need to parse them.
-	# For now, just print.
-	print("Received: %s" % message)
-	
-	# TODO: Parse SignalR protocol
-	# If it's a simple chat message:
-	# message_received.emit(parsed_message)
-
-func send_message(text: String, channel: int) -> void:
-	if connection_state != ConnectionState.CONNECTED:
-		return
-		
-	# Send as JSON for now
-	var data = {
-		"text": text,
-		"channel": channel
-	}
-	websocket_client.put_packet(JSON.stringify(data).to_utf8_buffer())
-
-func _generate_jwt_token(user_id: int, username: String) -> String:
-	# Mock token for dev
-	return "mock_token_%d_%s" % [user_id, username]
-			return false
-
-	if websocket_client.get_ready_state() == WebSocketPeer.STATE_OPEN:
-		connection_state = ConnectionState.CONNECTED
-		connection_established.emit()
-		print("Connected to chat WebSocket")
-		return true
-	else:
-		connection_state = ConnectionState.ERROR
-		var error_msg = "WebSocket connection failed: %d" % websocket_client.get_ready_state()
-		connection_failed.emit(error_msg)
-		print(error_msg)
-		return false
-
 # Join a chat room
 func join_room(room_id: int, username: String = ""):
 	if connection_state != ConnectionState.CONNECTED:
@@ -219,7 +179,7 @@ func get_online_users(room_id: int):
 	_send_websocket_message("GetOnlineUsers", {"roomId": room_id})
 
 # Get room message history via HTTP
-async func get_room_history(room_id: int, limit: int = 50, before: String = "") -> Array:
+func get_room_history(room_id: int, limit: int = 50, before: String = "") -> Array:
 	var url = "http://%s:%d/api/chat/rooms/%d/messages?limit=%d" % [
 		chat_service_config.get("address", "127.0.0.1"),
 		chat_service_config.get("port", 8090),
@@ -232,10 +192,29 @@ async func get_room_history(room_id: int, limit: int = 50, before: String = "") 
 
 	var headers = ["Authorization: Bearer %s" % jwt_token]
 
-	http_client.request(HTTPClient.METHOD_GET, url, headers)
+	var http_client = HTTPClient.new()
+	var error = http_client.connect_to_host(url)
+	if error != OK:
+		print("Failed to connect to chat service for room history")
+		return []
+
+	# Wait for connection
+	var start_time = Time.get_ticks_msec()
+	while http_client.get_status() == HTTPClient.STATUS_CONNECTING or http_client.get_status() == HTTPClient.STATUS_RESOLVING:
+		http_client.poll()
+		await get_tree().process_frame
+		if Time.get_ticks_msec() - start_time > 5000:
+			print("Connection timeout")
+			return []
+
+	# Send request
+	error = http_client.request(HTTPClient.METHOD_GET, url, headers)
+	if error != OK:
+		print("Failed to send room history request")
+		return []
 
 	# Wait for response
-	var start_time = Time.get_ticks_msec()
+	start_time = Time.get_ticks_msec()
 	while http_client.get_status() == HTTPClient.STATUS_REQUESTING:
 		await get_tree().process_frame
 		if Time.get_ticks_msec() - start_time > 5000:  # 5 second timeout
@@ -271,7 +250,7 @@ func poll_websocket():
 			break
 
 # Disconnect from chat service
-func disconnect():
+func disconnect_websocket():
 	if websocket_client.get_ready_state() == WebSocketPeer.STATE_OPEN:
 		websocket_client.close()
 

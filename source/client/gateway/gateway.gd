@@ -68,17 +68,19 @@ func do_request(
 	method: HTTPClient.Method,
 	path: String,
 	payload: Dictionary,
-) -> Dictionary:
+) -> Variant:
 	if http_request.get_http_client_status() == HTTPClient.Status.STATUS_CONNECTED:
 		return {"error": "request_error"}
 	
 	var custom_headers: PackedStringArray
 	custom_headers.append("Content-Type: application/json")
+	if not jwt_token.is_empty():
+		custom_headers.append("Authorization: Bearer " + jwt_token)
 	
 	var error: Error = http_request.request(
 		path,
 		custom_headers,
-		HTTPClient.METHOD_POST,
+		method, # Use the passed method
 		JSON.stringify(payload)
 	)
 
@@ -96,9 +98,13 @@ func do_request(
 	var headers: PackedStringArray = args[2]
 	var body: PackedByteArray = args[3]
 	
-	var data = JSON.parse_string(body.get_string_from_ascii())
-	if data is Dictionary:
-		return data
+	var json = JSON.new()
+	var parse_result = json.parse(body.get_string_from_ascii())
+	
+	if parse_result == OK:
+		return json.data
+	
+	print("JSON Parse Error: ", json.get_error_message())
 	return {"error": 1}
 
 
@@ -133,24 +139,36 @@ func _on_login_login_button_pressed() -> void:
 		return
 
 	popup_panel.display_waiting_popup()
-	var d: Dictionary = await do_request(
+	var d: Variant = await do_request(
 		HTTPClient.Method.METHOD_POST,
 		GatewayApi.login(),
 		{"username": username, "password": password}
 	)
-	if d.has("error") or not d.has("token"):
+	
+	# Handle Dictionary response
+	if d is Dictionary and (d.has("error") or not d.has("token")):
 		if not d.has("error"): d["error"] = "Login failed"
 		await popup_panel.confirm_message(str(d))
 		login_button.disabled = false
 		return
 	
-	# New backend response: { "userId": 1, "username": "name", "token": "jwt...", "expiration": "..." }
-	# Adapt to old logic
-	populate_worlds({}) # TODO: Fetch worlds from GameService
-	fill_connection_info(d["username"], d["userId"])
-	
-	# Store JWT token if needed
+	# Store JWT token
 	jwt_token = d["token"]
+	
+	# Fetch worlds
+	var worlds_response: Variant = await do_request(
+		HTTPClient.Method.METHOD_GET,
+		GatewayApi.worlds(),
+		{}
+	)
+	
+	if worlds_response is Dictionary and worlds_response.has("error"):
+		await popup_panel.confirm_message("Failed to fetch worlds")
+		login_button.disabled = false
+		return
+
+	fill_connection_info(d["username"], 0) # ID is not critical for display
+	populate_worlds(worlds_response)
 	
 	popup_panel.hide()
 	_show($WorldSelection, false)
@@ -159,17 +177,27 @@ func _on_login_login_button_pressed() -> void:
 func _on_guest_button_pressed() -> void:
 	popup_panel.display_waiting_popup()
 
-	var d: Dictionary = await do_request(
+	var d: Variant = await do_request(
 		HTTPClient.Method.METHOD_POST,
 		GatewayApi.guest(),
 		{GatewayApi.KEY_TOKEN_ID: token}
 	)
-	if d.has("error"):
+	if d is Dictionary and d.has("error"):
 		await popup_panel.confirm_message(str(d))
 		return
 	
-	fill_connection_info(d["a"]["name"], d["a"]["id"])
-	populate_worlds(d.get("w", {}))
+	# Guest login might need adaptation depending on backend implementation
+	# For now assuming similar flow
+	jwt_token = d.get("token", "")
+	
+	var worlds_response: Variant = await do_request(
+		HTTPClient.Method.METHOD_GET,
+		GatewayApi.worlds(),
+		{}
+	)
+	
+	fill_connection_info("Guest", 0)
+	populate_worlds(worlds_response)
 	
 	popup_panel.hide()
 	_show($WorldSelection, false)
@@ -178,44 +206,58 @@ func _on_guest_button_pressed() -> void:
 func _on_world_selected(world_id: int) -> void:
 	$WorldSelection.hide()
 	popup_panel.display_waiting_popup()
-	var d: Dictionary = await do_request(
-		HTTPClient.Method.METHOD_POST,
+	
+	# Note: GET request usually doesn't have body, but passing params for safety if needed
+	# The backend expects /api/world/characters (GET) with Authorization header
+	var d: Variant = await do_request(
+		HTTPClient.Method.METHOD_GET,
 		GatewayApi.world_characters(),
-		{GatewayApi.KEY_WORLD_ID: world_id,
-		GatewayApi.KEY_ACCOUNT_ID: account_id,
-		GatewayApi.KEY_ACCOUNT_USERNAME: account_name,
-		GatewayApi.KEY_TOKEN_ID: token}
+		{} 
 	)
-	if d.has("error"):
+	
+	if d is Dictionary and d.has("error"):
 		await popup_panel.confirm_message(str(d))
 		$WorldSelection.show()
 		return
 	
+	# d should be an Array of characters
+	var characters: Array = []
+	if d is Array:
+		characters = d
+	
 	var container: HBoxContainer = $CharacterSelection/VBoxContainer/HBoxContainer
 	var i: int = 0
-	var character_id: String
+	
 	for button: Button in container.get_children():
 		if button.pressed.is_connected(_on_character_selected):
 			button.pressed.disconnect(_on_character_selected)
-		if d["data"].size() > i:
-			character_id = d["data"].keys()[i]
-			button.text = "%s\nClass: %s\nLevel: %d" % [
-				d["data"][character_id]["name"],
-				d["data"][character_id]["class"],
-				d["data"][character_id]["level"],
+			
+		if i < characters.size():
+			var char_data = characters[i]
+			# Backend returns: Id, Name, Level, etc.
+			var char_id = char_data["id"] # GUID string or int
+			
+			button.text = "%s\nLevel: %d" % [
+				char_data["name"],
+				char_data["level"]
 			]
-			button.pressed.connect(_on_character_selected.bind(world_id, character_id.to_int()))
+			# Pass character ID (string or int)
+			button.pressed.connect(_on_character_selected.bind(world_id, char_id))
 		else:
 			button.text = "Create New Character"
-			button.pressed.connect(_on_character_selected.bind(world_id, -1))
+			# Use empty string or specific marker for new character
+			button.pressed.connect(_on_character_selected.bind(world_id, ""))
 		i += 1
+		
 	popup_panel.hide()
 	_show($CharacterSelection)
 
 
-func _on_character_selected(world_id: int, character_id: int) -> void:
+func _on_character_selected(world_id: int, character_id: Variant) -> void:
 	current_world_id = world_id
-	if character_id == -1:
+	
+	# Check if creating new character (empty string or specific marker)
+	if str(character_id) == "":
 		_show($CharacterCreation)
 		return
 	
@@ -223,23 +265,22 @@ func _on_character_selected(world_id: int, character_id: int) -> void:
 	$BackButton.hide()
 	popup_panel.display_waiting_popup()
 	
-	var d: Dictionary = await do_request(
+	var d: Variant = await do_request(
 		HTTPClient.Method.METHOD_POST,
 		GatewayApi.world_enter(),
 		{
-			GatewayApi.KEY_TOKEN_ID: token,
-			GatewayApi.KEY_ACCOUNT_USERNAME: account_name,
-			GatewayApi.KEY_WORLD_ID: world_id,
-			GatewayApi.KEY_CHAR_ID: character_id
+			"characterId": character_id
 		}
 	)
-	if d.has("error"):
+	
+	if d is Dictionary and d.has("error"):
 		await popup_panel.confirm_message(str(d))
 		$CharacterSelection.show()
 		$BackButton.show()
 		return
 	
-	world_server.connect_to_server(d["address"], d["port"], d["token"])
+	# Backend returns: { "token": "...", "host": "...", "port": ... }
+	world_server.connect_to_server(d["host"], d["port"], d["token"])
 	queue_free.call_deferred()
 
 
@@ -261,29 +302,49 @@ func _on_create_character_button_pressed() -> void:
 		return
 
 	popup_panel.display_waiting_popup()
-	var d: Dictionary = await do_request(
+	
+	# Create Character
+	var d: Variant = await do_request(
 		HTTPClient.Method.METHOD_POST,
 		GatewayApi.world_create_char(),
 		{
-			GatewayApi.KEY_TOKEN_ID: token,
-			"data": {
-				"name": username_edit.text,
-				"skin": selected_skin_id,
-			},
-			GatewayApi.KEY_ACCOUNT_USERNAME: account_name,
-			GatewayApi.KEY_WORLD_ID: current_world_id
+			"name": username_edit.text,
+			"skinColor": selected_skin_id, # Mapping simple ID to backend fields
+			"hairStyle": 0,
+			"hairColor": 0,
+			"shirtColor": 0,
+			"pantsColor": 0
 		}
 	)
-	if d.has("error"):
+	
+	if d is Dictionary and d.has("error"):
 		await popup_panel.confirm_message(str(d))
 		create_button.disabled = false
 		$CharacterCreation.show()
 		return
 	
+	# Character created successfully (returns CharacterDto)
+	# Now enter world with this new character
+	var new_char_id = d["id"]
+	
+	var enter_response: Variant = await do_request(
+		HTTPClient.Method.METHOD_POST,
+		GatewayApi.world_enter(),
+		{
+			"characterId": new_char_id
+		}
+	)
+	
+	if enter_response is Dictionary and enter_response.has("error"):
+		await popup_panel.confirm_message("Character created but failed to enter: " + str(enter_response))
+		create_button.disabled = false
+		$CharacterCreation.show()
+		return
+
 	world_server.connect_to_server(
-		d["data"]["address"],
-		d["data"]["port"],
-		d["data"]["auth-token"]
+		enter_response["host"],
+		enter_response["port"],
+		enter_response["token"]
 	)
 	queue_free.call_deferred()
 
@@ -335,14 +396,28 @@ func _on_create_account_button_pressed() -> void:
 	_show($CreateAccountPanel)
 
 
-func populate_worlds(world_info: Dictionary) -> void:
+func populate_worlds(world_info: Variant) -> void:
 	var container: HBoxContainer = $WorldSelection/VBoxContainer/HBoxContainer
 	
 	var i: int = 0
 	for button: Button in container.get_children():
 		if button.pressed.is_connected(_on_world_selected):
 			button.pressed.disconnect(_on_world_selected)
-		if i < world_info.size():
+			
+		if world_info is Array and i < world_info.size():
+			var world = world_info[i]
+			# Backend returns: Id, Name, Address, Port, CurrentPlayers, MaxPlayers, Status
+			button.text = "%s\n\n%s" % [
+				world.get("name", "Unknown"),
+				world.get("status", "Online")
+			]
+			# Assuming world ID is string in backend but int in Godot logic? 
+			# If backend uses string IDs (e.g. "world-1"), we might need to adapt.
+			# For now, passing 0 or parsing if possible.
+			button.pressed.connect(_on_world_selected.bind(0)) 
+			
+		elif world_info is Dictionary and i < world_info.size():
+			# Fallback for old format if needed
 			var world_id: String = world_info.keys()[i]
 			button.text = "%s\n\n%s" % [
 				world_info[world_id].get("name", "name"),

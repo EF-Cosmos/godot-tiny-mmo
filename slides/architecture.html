@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Godot Tiny MMO - 项目架构</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #00f0ff;
+            --primary-purple: #8b5cf6;
+            --deep-purple: #6d28d9;
+            --dark-bg: #0a0e1a;
+            --darker-bg: #050810;
+            --card-bg: rgba(15, 25, 45, 0.8);
+            --card-border: rgba(0, 240, 255, 0.3);
+            --text-primary: #e0e7ff;
+            --text-secondary: #94a3b8;
+            --glow-blue: 0 0 20px rgba(0, 240, 255, 0.5);
+            --glow-purple: 0 0 20px rgba(139, 92, 246, 0.5);
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: var(--darker-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Grid Background */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Animated gradient orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            pointer-events: none;
+            z-index: 1;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--deep-purple), transparent);
+            top: -100px;
+            right: -100px;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, var(--primary-blue), transparent);
+            bottom: -50px;
+            left: -50px;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+
+        /* Main container */
+        .slide-container {
+            position: relative;
+            z-index: 2;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 40px 60px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .header h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-purple) 50%, #c084fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 40px rgba(0, 240, 255, 0.3);
+        }
+
+        .header .subtitle {
+            font-size: 1.4rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .header .subtitle span {
+            color: var(--primary-blue);
+            font-weight: 600;
+        }
+
+        /* Architecture diagram */
+        .architecture {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            position: relative;
+        }
+
+        /* Row container */
+        .arch-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 60px;
+            width: 100%;
+            position: relative;
+        }
+
+        /* Component cards */
+        .component {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 25px 30px;
+            min-width: 220px;
+            text-align: center;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            animation: scaleIn 0.6s ease-out backwards;
+        }
+
+        .component::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            border-radius: 12px;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .component:hover {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: var(--glow-blue), var(--glow-purple);
+        }
+
+        .component:hover::before {
+            opacity: 1;
+        }
+
+        .component.godot {
+            border-color: rgba(68, 223, 68, 0.5);
+        }
+
+        .component.godot:hover {
+            box-shadow: 0 0 30px rgba(68, 223, 68, 0.6);
+        }
+
+        .component .icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .component h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .component .tech {
+            font-size: 0.85rem;
+            color: var(--primary-blue);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .component .port {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            color: var(--dark-bg);
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Connection lines */
+        .connections {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .connection-line {
+            position: absolute;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--primary-blue), var(--primary-purple), transparent);
+            transform-origin: left center;
+            animation: pulse-line 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-line {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* Arrow markers */
+        .arrow {
+            position: absolute;
+            font-size: 1.5rem;
+            color: var(--primary-blue);
+            animation: bounce 1.5s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Microservices cluster */
+        .microservices {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 700px;
+            animation: scaleIn 0.8s ease-out 0.6s backwards;
+        }
+
+        .microservices .component {
+            min-width: 140px;
+            padding: 20px;
+        }
+
+        .microservices .component .icon {
+            font-size: 1.8rem;
+        }
+
+        .microservices .component h3 {
+            font-size: 0.9rem;
+        }
+
+        .microservices-label {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem;
+            color: var(--primary-purple);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            white-space: nowrap;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+            animation: fadeIn 1s ease-out 1s backwards;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-item .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .legend-item .dot.godot {
+            background: #44df44;
+            box-shadow: 0 0 10px rgba(68, 223, 68, 0.6);
+        }
+
+        .legend-item .dot.dotnet {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+        }
+
+        .legend-item .dot.gateway {
+            background: var(--primary-blue);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+        }
+
+        .legend-item span {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Detail panel */
+        .detail-panel {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 14, 26, 0.95);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 20px 40px;
+            max-width: 600px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .detail-panel.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .detail-panel h4 {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--primary-blue);
+            margin-bottom: 8px;
+        }
+
+        .detail-panel p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Stagger animations */
+        .component:nth-child(1) { animation-delay: 0.1s; }
+        .component:nth-child(2) { animation-delay: 0.2s; }
+        .component:nth-child(3) { animation-delay: 0.3s; }
+        .component:nth-child(4) { animation-delay: 0.4s; }
+        .component:nth-child(5) { animation-delay: 0.5s; }
+        .component:nth-child(6) { animation-delay: 0.6s; }
+
+        /* Data flow particles */
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: var(--primary-blue);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--primary-blue);
+            animation: flow 3s linear infinite;
+        }
+
+        @keyframes flow {
+            0% { offset-distance: 0%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { offset-distance: 100%; opacity: 0; }
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .header h1 { font-size: 2.5rem; }
+            .arch-row { gap: 30px; }
+            .component { min-width: 180px; padding: 20px; }
+            .microservices { max-width: 500px; }
+            .microservices .component { min-width: 120px; }
+        }
+
+        @media (max-width: 768px) {
+            .slide-container { padding: 20px; }
+            .header h1 { font-size: 2rem; letter-spacing: 2px; }
+            .arch-row { flex-direction: column; gap: 20px; }
+            .component { min-width: 200px; }
+            .microservices { gap: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <div class="slide-container">
+        <header class="header">
+            <h1>项目架构</h1>
+            <p class="subtitle">
+                <span>Godot 4.5</span> + <span>.NET 10.0</span> 双引擎架构
+            </p>
+        </header>
+
+        <div class="architecture">
+            <!-- Row 1: Client -->
+            <div class="arch-row">
+                <div class="component godot" data-detail="客户端：使用 GDScript 构建，通过 WebSocket 与服务器通信，支持跨平台运行">
+                    <span class="icon">🎮</span>
+                    <h3>Godot 客户端</h3>
+                    <span class="tech">GDScript</span>
+                </div>
+            </div>
+
+            <!-- Arrow down -->
+            <div class="arrow">⬇</div>
+
+            <!-- Row 2: Gateway -->
+            <div class="arch-row">
+                <div class="component" data-detail="Gateway 服务器：处理 HTTP REST API，负责用户认证、角色创建、登录等功能">
+                    <span class="icon">🚪</span>
+                    <h3>Gateway 服务器</h3>
+                    <span class="tech">GDScript</span>
+                </div>
+
+                <div class="component gateway" data-detail="API 网关：基于 Ocelot 的统一入口，处理路由转发、JWT 认证、负载均衡">
+                    <span class="port">5000</span>
+                    <span class="icon">🔀</span>
+                    <h3>API 网关</h3>
+                    <span class="tech">Ocelot</span>
+                </div>
+            </div>
+
+            <!-- Arrow down -->
+            <div class="arrow">⬇</div>
+
+            <!-- Row 3: Core -->
+            <div class="arch-row">
+                <div class="component" data-detail="Master 服务器：中央协调器，管理账户数据库，连接 Gateway 和 World 服务器">
+                    <span class="icon">🎯</span>
+                    <h3>Master 服务器</h3>
+                    <span class="tech">GDScript</span>
+                </div>
+
+                <div class="microservices">
+                    <span class="microservices-label">微服务集群</span>
+                    <div class="component" data-detail="认证服务：用户注册、登录、JWT 令牌管理">
+                        <span class="port">5001</span>
+                        <span class="icon">🔐</span>
+                        <h3>Auth</h3>
+                    </div>
+                    <div class="component" data-detail="游戏服务：游戏状态管理、规则执行、数据同步">
+                        <span class="port">5002</span>
+                        <span class="icon">⚔️</span>
+                        <h3>Game</h3>
+                    </div>
+                    <div class="component" data-detail="房间服务：游戏房间创建、玩家匹配、实例管理">
+                        <span class="port">5003</span>
+                        <span class="icon">🏠</span>
+                        <h3>Room</h3>
+                    </div>
+                    <div class="component" data-detail="聊天服务：SignalR 实时通信、消息持久化、多频道支持">
+                        <span class="port">5004</span>
+                        <span class="icon">💬</span>
+                        <h3>Chat</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Arrow down -->
+            <div class="arrow">⬇</div>
+
+            <!-- Row 4: World -->
+            <div class="arch-row">
+                <div class="component" data-detail="World 服务器：托管游戏实例，10 物理 tick/秒，每实例最多 200 玩家，处理核心游戏逻辑">
+                    <span class="icon">🌍</span>
+                    <h3>World 服务器</h3>
+                    <span class="tech">游戏逻辑</span>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="legend">
+                <div class="legend-item">
+                    <span class="dot godot"></span>
+                    <span>GDScript / Godot</span>
+                </div>
+                <div class="legend-item">
+                    <span class="dot dotnet"></span>
+                    <span>.NET 微服务</span>
+                </div>
+                <div class="legend-item">
+                    <span class="dot gateway"></span>
+                    <span>API 网关</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-panel" id="detailPanel">
+            <h4 id="detailTitle">组件名称</h4>
+            <p id="detailDesc">组件描述</p>
+        </div>
+    </div>
+
+    <script>
+        // Component hover effects
+        const components = document.querySelectorAll('.component');
+        const detailPanel = document.getElementById('detailPanel');
+        const detailTitle = document.getElementById('detailTitle');
+        const detailDesc = document.getElementById('detailDesc');
+
+        components.forEach(comp => {
+            comp.addEventListener('mouseenter', () => {
+                const title = comp.querySelector('h3').textContent;
+                const desc = comp.dataset.detail;
+                detailTitle.textContent = title;
+                detailDesc.textContent = desc;
+                detailPanel.classList.add('active');
+            });
+
+            comp.addEventListener('mouseleave', () => {
+                detailPanel.classList.remove('active');
+            });
+        });
+
+        // Create floating particles for data flow visualization
+        function createParticle() {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+
+            const startX = Math.random() * window.innerWidth;
+            const startY = window.innerHeight;
+            const endX = startX + (Math.random() - 0.5) * 200;
+            const endY = -100;
+
+            particle.style.left = startX + 'px';
+            particle.style.top = startY + 'px';
+            particle.style.offsetPath = `path('M${startX},${startY} Q${(startX + endX) / 2},${(startY + endY) / 2} ${endX},${endY}')`;
+
+            document.body.appendChild(particle);
+
+            setTimeout(() => {
+                particle.remove();
+            }, 3000);
+        }
+
+        // Create particles periodically
+        setInterval(createParticle, 500);
+
+        // Keyboard navigation hint
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                // Navigate to next slide (placeholder)
+                console.log('Next slide');
+            } else if (e.key === 'ArrowLeft') {
+                // Navigate to previous slide (placeholder)
+                console.log('Previous slide');
+            }
+        });
+    </script>
+</body>
+</html>

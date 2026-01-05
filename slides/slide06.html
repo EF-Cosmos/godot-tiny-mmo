@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>技术栈 - GODOT TINY MMO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #030508;
+      --bg-mid: #071020;
+      --cyan-glow: #00F0FF;
+      --cyan-dim: #00A8B3;
+      --vivid-violet: #A855F7;
+      --magenta-hot: #FF006E;
+      --electric-blue: #3B82F6;
+      --text-bright: #F0F4F8;
+      --text-muted: #64748B;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      background: var(--bg-deep);
+      font-family: 'Rajdhani', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Slide Container - 16:9 Aspect Ratio */
+    .slide {
+      width: 1920px;
+      height: 1080px;
+      position: relative;
+      overflow: hidden;
+      background: var(--bg-deep);
+    }
+
+    /* Animated Background Gradient */
+    .bg-gradient {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 60%, rgba(168, 85, 247, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse 100% 80% at 50% 100%, rgba(0, 240, 255, 0.08) 0%, transparent 40%),
+        linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-mid) 50%, var(--bg-deep) 100%);
+      animation: gradientPulse 8s ease-in-out infinite;
+    }
+
+    @keyframes gradientPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.85; }
+    }
+
+    /* Hexagonal Grid Overlay */
+    .hex-grid {
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%2300F0FF' fill-opacity='0.03'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      opacity: 0.6;
+      animation: gridScroll 20s linear infinite;
+    }
+
+    @keyframes gridScroll {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(49px); }
+    }
+
+    /* Circuit Lines */
+    .circuit-lines {
+      position: absolute;
+      inset: 0;
+      opacity: 0.3;
+    }
+
+    .circuit-lines svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .circuit-path {
+      stroke: var(--cyan-glow);
+      stroke-width: 1;
+      fill: none;
+      stroke-dasharray: 2000;
+      stroke-dashoffset: 2000;
+      animation: drawCircuit 3s ease-out forwards;
+    }
+
+    @keyframes drawCircuit {
+      to { stroke-dashoffset: 0; }
+    }
+
+    /* Glowing Orbs */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+      animation: orbFloat 6s ease-in-out infinite;
+    }
+
+    .orb-1 {
+      width: 300px;
+      height: 300px;
+      background: rgba(0, 240, 255, 0.25);
+      top: -100px;
+      left: -50px;
+      animation-delay: 0s;
+    }
+
+    .orb-2 {
+      width: 250px;
+      height: 250px;
+      background: rgba(168, 85, 247, 0.2);
+      bottom: -80px;
+      right: 100px;
+      animation-delay: 2s;
+    }
+
+    .orb-3 {
+      width: 180px;
+      height: 180px;
+      background: rgba(59, 130, 246, 0.15);
+      top: 50%;
+      right: -50px;
+      animation-delay: 4s;
+    }
+
+    @keyframes orbFloat {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(20px, -20px) scale(1.05); }
+      66% { transform: translate(-10px, 15px) scale(0.95); }
+    }
+
+    /* Corner Decorations */
+    .corner {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      opacity: 0;
+      animation: cornerFade 1s ease-out 0.5s forwards;
+    }
+
+    .corner-tl { top: 40px; left: 40px; }
+    .corner-tr { top: 40px; right: 40px; transform: rotate(90deg); }
+    .corner-bl { bottom: 40px; left: 40px; transform: rotate(-90deg); }
+    .corner-br { bottom: 40px; right: 40px; transform: rotate(180deg); }
+
+    .corner svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .corner path {
+      stroke: var(--cyan-glow);
+      stroke-width: 2;
+      fill: none;
+      stroke-dasharray: 300;
+      stroke-dashoffset: 300;
+      animation: drawCorner 1s ease-out 0.5s forwards;
+    }
+
+    @keyframes cornerFade {
+      to { opacity: 0.6; }
+    }
+
+    @keyframes drawCorner {
+      to { stroke-dashoffset: 0; }
+    }
+
+    /* Page Number */
+    .page-number {
+      position: absolute;
+      bottom: 50px;
+      right: 60px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 48px;
+      font-weight: 900;
+      color: var(--cyan-glow);
+      opacity: 0.15;
+    }
+
+    /* Header */
+    .header {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      z-index: 10;
+    }
+
+    .header h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 56px;
+      font-weight: 900;
+      color: var(--text-bright);
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+      opacity: 0;
+      animation: fadeInDown 1s ease-out 0.3s forwards;
+      text-shadow:
+        0 0 20px rgba(0, 240, 255, 0.5),
+        0 0 40px rgba(0, 240, 255, 0.3);
+    }
+
+    .header .subtitle {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--cyan-glow);
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadeInDown 1s ease-out 0.5s forwards;
+    }
+
+    @keyframes fadeInDown {
+      0% { opacity: 0; transform: translateY(-30px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Tech Stack Grid */
+    .tech-grid {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 1650px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 40px;
+    }
+
+    /* Tech Card */
+    .tech-card {
+      background: rgba(7, 16, 32, 0.85);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      border-radius: 12px;
+      padding: 40px 50px;
+      position: relative;
+      backdrop-filter: blur(10px);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      opacity: 0;
+      animation: slideInUp 0.6s ease-out forwards;
+    }
+
+    .tech-card::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      background: linear-gradient(135deg, var(--cyan-glow), var(--electric-blue));
+      border-radius: 12px;
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .tech-card:hover {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: 0 0 40px rgba(0, 240, 255, 0.4);
+    }
+
+    .tech-card:hover::before {
+      opacity: 1;
+    }
+
+    .tech-card .tech-icon {
+      font-size: 2.5rem;
+      margin-bottom: 15px;
+      display: block;
+    }
+
+    .tech-card h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--cyan-glow);
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .tech-card .tech-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .tech-item {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      background: rgba(0, 240, 255, 0.05);
+      border-left: 2px solid var(--cyan-glow);
+      border-radius: 4px;
+      transition: all 0.3s ease;
+    }
+
+    .tech-item:hover {
+      background: rgba(0, 240, 255, 0.1);
+      border-left-width: 4px;
+      padding-left: 20px;
+    }
+
+    .tech-item .highlight {
+      color: var(--vivid-violet);
+      font-weight: 500;
+    }
+
+    @keyframes slideInUp {
+      0% { opacity: 0; transform: translateY(40px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Scanline Effect */
+    .scanline {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.1) 2px,
+        rgba(0, 0, 0, 0.1) 4px
+      );
+      pointer-events: none;
+      opacity: 0.3;
+    }
+
+    /* Noise Overlay */
+    .noise {
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+    }
+
+    /* Version Info */
+    .version {
+      position: absolute;
+      bottom: 50px;
+      left: 60px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      opacity: 0;
+      animation: fadeIn 1s ease-out 2s forwards;
+    }
+
+    .version span {
+      color: var(--cyan-dim);
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="slide">
+    <!-- Background Layers -->
+    <div class="bg-gradient"></div>
+    <div class="hex-grid"></div>
+    <div class="circuit-lines">
+      <svg viewBox="0 0 1920 1080" preserveAspectRatio="none">
+        <path class="circuit-path" d="M200,200 L400,200 L400,350"/>
+        <path class="circuit-path" style="animation-delay: 0.5s;stroke: var(--electric-blue)" d="M1720,200 L1520,200 L1520,350"/>
+        <path class="circuit-path" style="animation-delay: 1s;stroke: var(--vivid-violet)" d="M960,900 L960,750"/>
+      </svg>
+    </div>
+
+    <!-- Glowing Orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- Corner Decorations -->
+    <div class="corner corner-tl">
+      <svg viewBox="0 0 80 80"><path d="M10,70 L10,10 L70,10"/></svg>
+    </div>
+    <div class="corner corner-tr">
+      <svg viewBox="0 0 80 80"><path d="M10,70 L10,10 L70,10"/></svg>
+    </div>
+    <div class="corner corner-bl">
+      <svg viewBox="0 0 80 80"><path d="M10,70 L10,10 L70,10"/></svg>
+    </div>
+    <div class="corner corner-br">
+      <svg viewBox="0 0 80 80"><path d="M10,70 L10,10 L70,10"/></svg>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <h1>技术栈</h1>
+      <p class="subtitle">双引擎 · 云原生</p>
+    </div>
+
+    <!-- Tech Stack Grid -->
+    <div class="tech-grid">
+      <div class="tech-card" style="animation-delay: 0.2s">
+        <span class="tech-icon">⚙️</span>
+        <h3>引擎 & 框架</h3>
+        <div class="tech-list">
+          <div class="tech-item"><span class="highlight">Godot 4.5</span> · GDScript</div>
+          <div class="tech-item"><span class="highlight">.NET 10.0</span> · ASP.NET Core 10.0</div>
+        </div>
+      </div>
+
+      <div class="tech-card" style="animation-delay: 0.4s">
+        <span class="tech-icon">🌐</span>
+        <h3>网关 & 通信</h3>
+        <div class="tech-list">
+          <div class="tech-item"><span class="highlight">Ocelot</span> · SignalR</div>
+          <div class="tech-item">REST API · gRPC</div>
+        </div>
+      </div>
+
+      <div class="tech-card" style="animation-delay: 0.6s">
+        <span class="tech-icon">🗄️</span>
+        <h3>数据 & 缓存</h3>
+        <div class="tech-list">
+          <div class="tech-item"><span class="highlight">PostgreSQL</span> · EF Core 10.0</div>
+          <div class="tech-item">Redis · StackExchange.Redis</div>
+        </div>
+      </div>
+
+      <div class="tech-card" style="animation-delay: 0.8s">
+        <span class="tech-icon">🔧</span>
+        <h3>基础设施</h3>
+        <div class="tech-list">
+          <div class="tech-item"><span class="highlight">Consul</span> · Docker</div>
+          <div class="tech-item">OpenTelemetry · Jaeger</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page Number -->
+    <div class="page-number">06</div>
+
+    <!-- Version Info -->
+    <div class="version">
+      v1.0 <span>|</span> refactor/microservices-backend
+    </div>
+
+    <!-- Overlays -->
+    <div class="scanline"></div>
+    <div class="noise"></div>
+  </div>
+</body>
+</html>

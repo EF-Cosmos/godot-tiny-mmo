@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>项目架构 - GODOT TINY MMO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #030508;
+      --bg-mid: #071020;
+      --cyan-glow: #00F0FF;
+      --cyan-dim: #00A8B3;
+      --vivid-violet: #A855F7;
+      --magenta-hot: #FF006E;
+      --electric-blue: #3B82F6;
+      --text-bright: #F0F4F8;
+      --text-muted: #64748B;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      background: var(--bg-deep);
+      font-family: 'Rajdhani', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Slide Container - 16:9 Aspect Ratio */
+    .slide {
+      width: 1920px;
+      height: 1080px;
+      position: relative;
+      overflow: hidden;
+      background: var(--bg-deep);
+    }
+
+    /* Animated Background Gradient */
+    .bg-gradient {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 40%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 60%, rgba(168, 85, 247, 0.12) 0%, transparent 50%),
+        radial-gradient(ellipse 100% 80% at 50% 100%, rgba(0, 240, 255, 0.08) 0%, transparent 40%),
+        linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-mid) 50%, var(--bg-deep) 100%);
+      animation: gradientPulse 8s ease-in-out infinite;
+    }
+
+    @keyframes gradientPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.85; }
+    }
+
+    /* Hexagonal Grid Overlay */
+    .hex-grid {
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%2300F0FF' fill-opacity='0.03'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      opacity: 0.6;
+      animation: gridScroll 20s linear infinite;
+    }
+
+    @keyframes gridScroll {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(49px); }
+    }
+
+    /* Circuit Lines */
+    .circuit-lines {
+      position: absolute;
+      inset: 0;
+      opacity: 0.3;
+    }
+
+    .circuit-lines svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .circuit-path {
+      stroke: var(--cyan-glow);
+      stroke-width: 1;
+      fill: none;
+      stroke-dasharray: 2000;
+      stroke-dashoffset: 2000;
+      animation: drawCircuit 3s ease-out forwards;
+    }
+
+    @keyframes drawCircuit {
+      to { stroke-dashoffset: 0; }
+    }
+
+    /* Glowing Orbs */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+      animation: orbFloat 6s ease-in-out infinite;
+    }
+
+    .orb-1 {
+      width: 300px;
+      height: 300px;
+      background: rgba(0, 240, 255, 0.25);
+      top: -100px;
+      left: -50px;
+      animation-delay: 0s;
+    }
+
+    .orb-2 {
+      width: 250px;
+      height: 250px;
+      background: rgba(168, 85, 247, 0.2);
+      bottom: -80px;
+      right: 100px;
+      animation-delay: 2s;
+    }
+
+    .orb-3 {
+      width: 180px;
+      height: 180px;
+      background: rgba(255, 0, 110, 0.15);
+      top: 50%;
+      right: -50px;
+      animation-delay: 4s;
+    }
+
+    @keyframes orbFloat {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(20px, -20px) scale(1.05); }
+      66% { transform: translate(-10px, 15px) scale(0.95); }
+    }
+
+    /* Corner Decorations */
+    .corner {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      opacity: 0;
+      animation: cornerFade 1s ease-out 0.5s forwards;
+    }
+
+    .corner-tl { top: 40px; left: 40px; }
+    .corner-tr { top: 40px; right: 40px; transform: rotate(90deg); }
+    .corner-bl { bottom: 40px; left: 40px; transform: rotate(-90deg); }
+    .corner-br { bottom: 40px; right: 40px; transform: rotate(180deg); }
+
+    .corner svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .corner path {
+      stroke: var(--cyan-glow);
+      stroke-width: 2;
+      fill: none;
+      stroke-dasharray: 300;
+      stroke-dashoffset: 300;
+      animation: drawCorner 1s ease-out 0.5s forwards;
+    }
+
+    @keyframes cornerFade {
+      to { opacity: 0.6; }
+    }
+
+    @keyframes drawCorner {
+      to { stroke-dashoffset: 0; }
+    }
+
+    /* Page Number */
+    .page-number {
+      position: absolute;
+      bottom: 50px;
+      right: 60px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 48px;
+      font-weight: 900;
+      color: var(--cyan-glow);
+      opacity: 0.15;
+    }
+
+    /* Header */
+    .header {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      z-index: 10;
+    }
+
+    .header h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 56px;
+      font-weight: 900;
+      color: var(--text-bright);
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-bottom: 15px;
+      opacity: 0;
+      animation: fadeInDown 1s ease-out 0.3s forwards;
+      text-shadow:
+        0 0 20px rgba(0, 240, 255, 0.5),
+        0 0 40px rgba(0, 240, 255, 0.3);
+    }
+
+    .header .subtitle {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--cyan-glow);
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadeInDown 1s ease-out 0.5s forwards;
+    }
+
+    .header .subtitle span {
+      color: var(--vivid-violet);
+    }
+
+    @keyframes fadeInDown {
+      0% { opacity: 0; transform: translateY(-30px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Architecture Diagram */
+    .architecture {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 1700px;
+      height: 500px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 30px;
+    }
+
+    /* Component Columns (horizontal layout) */
+    .arch-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      height: 100%;
+      position: relative;
+    }
+
+    /* Component Card */
+    .component {
+      background: rgba(7, 16, 32, 0.85);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      border-radius: 8px;
+      padding: 20px 30px;
+      min-width: 180px;
+      text-align: center;
+      position: relative;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      opacity: 0;
+      animation: scaleIn 0.6s ease-out forwards;
+    }
+
+    .component::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      background: linear-gradient(135deg, var(--cyan-glow), var(--vivid-violet));
+      border-radius: 8px;
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .component:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.4);
+    }
+
+    .component:hover::before {
+      opacity: 1;
+    }
+
+    .component.godot {
+      border-color: rgba(68, 223, 68, 0.5);
+    }
+
+    .component.godot:hover {
+      box-shadow: 0 0 30px rgba(68, 223, 68, 0.5);
+    }
+
+    .component .icon {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .component h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .component .tech {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--cyan-glow);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .component .port {
+      position: absolute;
+      top: -12px;
+      right: -12px;
+      background: linear-gradient(135deg, var(--cyan-glow), var(--vivid-violet));
+      color: var(--bg-deep);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Arrows */
+    .arrow {
+      font-size: 2.5rem;
+      color: var(--cyan-glow);
+      text-shadow: 0 0 10px var(--cyan-glow);
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out forwards;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    @keyframes scaleIn {
+      0% { opacity: 0; transform: scale(0.8); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 0.8; }
+    }
+
+    /* Microservices Cluster */
+    .microservices-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .microservices-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      color: var(--vivid-violet);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      white-space: nowrap;
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out 1.2s forwards;
+    }
+
+    .microservices {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .microservices .component {
+      min-width: 140px;
+      padding: 14px 20px;
+    }
+
+    .microservices .component .icon {
+      font-size: 1.4rem;
+    }
+
+    .microservices .component h3 {
+      font-size: 11px;
+    }
+
+    .microservices .component .tech {
+      font-size: 9px;
+    }
+
+    .microservices .component .port {
+      top: -8px;
+      right: -8px;
+      font-size: 9px;
+      padding: 3px 8px;
+    }
+
+    /* Legend */
+    .legend {
+      position: absolute;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 50px;
+      justify-content: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      opacity: 0;
+      animation: fadeIn 0.5s ease-out 1.8s forwards;
+    }
+
+    .legend-item .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .legend-item .dot.godot {
+      background: #44df44;
+      box-shadow: 0 0 10px rgba(68, 223, 68, 0.6);
+    }
+
+    .legend-item .dot.dotnet {
+      background: linear-gradient(135deg, var(--cyan-glow), var(--vivid-violet));
+      box-shadow: 0 0 10px rgba(168, 85, 247, 0.6);
+    }
+
+    .legend-item .dot.gateway {
+      background: var(--cyan-glow);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+    }
+
+    .legend-item span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Scanline Effect */
+    .scanline {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.1) 2px,
+        rgba(0, 0, 0, 0.1) 4px
+      );
+      pointer-events: none;
+      opacity: 0.3;
+    }
+
+    /* Noise Overlay */
+    .noise {
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+    }
+
+    /* Version Info */
+    .version {
+      position: absolute;
+      bottom: 50px;
+      left: 60px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      opacity: 0;
+      animation: fadeIn 1s ease-out 2s forwards;
+    }
+
+    .version span {
+      color: var(--cyan-dim);
+    }
+  </style>
+</head>
+<body>
+  <div class="slide">
+    <!-- Background Layers -->
+    <div class="bg-gradient"></div>
+    <div class="hex-grid"></div>
+    <div class="circuit-lines">
+      <svg viewBox="0 0 1920 1080" preserveAspectRatio="none">
+        <path class="circuit-path" d="M200,200 L400,200 L400,350"/>
+        <path class="circuit-path" style="animation-delay: 0.5s;stroke: var(--vivid-violet)" d="M1720,200 L1520,200 L1520,350"/>
+        <path class="circuit-path" style="animation-delay: 1s;stroke: var(--magenta-hot)" d="M960,900 L960,750"/>
+      </svg>
+    </div>
+
+    <!-- Glowing Orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- Corner Decorations -->
+    <div class="corner corner-tl">
+      <svg viewBox="0 0 80 80"><path d="M10,70 L10,10 L70,10"/></svg>
+    </div>
+    <div class="corner corner-tr">
+      <svg viewBox="0 0 80 80"><path d="M10,70 L10,10 L70,10"/></svg>
+    </div>
+    <div class="corner corner-bl">
+      <svg viewBox="0 0 80 80"><path d="M10,70 L10,10 L70,10"/></svg>
+    </div>
+    <div class="corner corner-br">
+      <svg viewBox="0 0 80 80"><path d="M10,70 L10,10 L70,10"/></svg>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <h1>项目架构</h1>
+      <p class="subtitle"><span>Godot 4.5</span> + <span>.NET 10.0</span> 双引擎架构</p>
+    </div>
+
+    <!-- Architecture Diagram -->
+    <div class="architecture">
+      <!-- Client -->
+      <div class="component godot" style="animation-delay: 0.2s">
+        <span class="icon">🎮</span>
+        <h3>Godot 客户端</h3>
+        <span class="tech">GDScript</span>
+      </div>
+
+      <!-- Arrow -->
+      <div class="arrow" style="animation-delay: 0.4s">→</div>
+
+      <!-- Gateway Column -->
+      <div class="arch-column">
+        <div class="component godot" style="animation-delay: 0.3s">
+          <span class="icon">🚪</span>
+          <h3>Gateway 服务器</h3>
+          <span class="tech">GDScript</span>
+        </div>
+
+        <div class="component" style="animation-delay: 0.4s">
+          <span class="port">5000</span>
+          <span class="icon">🔀</span>
+          <h3>API 网关</h3>
+          <span class="tech">Ocelot</span>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="arrow" style="animation-delay: 0.6s">→</div>
+
+      <!-- Master Server -->
+      <div class="component godot" style="animation-delay: 0.5s">
+        <span class="icon">🎯</span>
+        <h3>Master 服务器</h3>
+        <span class="tech">GDScript</span>
+      </div>
+
+      <!-- Arrow -->
+      <div class="arrow" style="animation-delay: 0.8s">→</div>
+
+      <!-- Microservices -->
+      <div class="microservices-wrapper">
+        <span class="microservices-label">微服务集群</span>
+        <div class="microservices">
+          <div class="component" style="animation-delay: 0.6s">
+            <span class="port">5001</span>
+            <span class="icon">🔐</span>
+            <h3>Auth</h3>
+            <span class="tech">JWT</span>
+          </div>
+          <div class="component" style="animation-delay: 0.7s">
+            <span class="port">5002</span>
+            <span class="icon">⚔️</span>
+            <h3>Game</h3>
+            <span class="tech">Orleans</span>
+          </div>
+          <div class="component" style="animation-delay: 0.8s">
+            <span class="port">5003</span>
+            <span class="icon">🏠</span>
+            <h3>Room</h3>
+            <span class="tech">Redis</span>
+          </div>
+          <div class="component" style="animation-delay: 0.9s">
+            <span class="port">5004</span>
+            <span class="icon">💬</span>
+            <h3>Chat</h3>
+            <span class="tech">SignalR</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="arrow" style="animation-delay: 1s">→</div>
+
+      <!-- World Server -->
+      <div class="component godot" style="animation-delay: 1s">
+        <span class="icon">🌍</span>
+        <h3>World 服务器</h3>
+        <span class="tech">游戏逻辑</span>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-item">
+        <span class="dot godot"></span>
+        <span>GDScript / Godot</span>
+      </div>
+      <div class="legend-item">
+        <span class="dot dotnet"></span>
+        <span>.NET 微服务</span>
+      </div>
+      <div class="legend-item">
+        <span class="dot gateway"></span>
+        <span>API 网关</span>
+      </div>
+    </div>
+
+    <!-- Page Number -->
+    <div class="page-number">02</div>
+
+    <!-- Version Info -->
+    <div class="version">
+      v1.0 <span>|</span> refactor/microservices-backend
+    </div>
+
+    <!-- Overlays -->
+    <div class="scanline"></div>
+    <div class="noise"></div>
+  </div>
+</body>
+</html>

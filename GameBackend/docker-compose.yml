@@ -29,7 +29,7 @@ services:
       POSTGRES_DB: game_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_MULTIPLE_DATABASES: game_auth, game_chat, game_analytics, game_leaderboard
+      POSTGRES_MULTIPLE_DATABASES: game_auth, game_chat, game_analytics, game_leaderboard, game_inventory
     ports:
       - "5432:5432"
     volumes:
@@ -133,10 +133,13 @@ services:
       - Consul__ConsulPort=8500
       - Consul__HealthCheck__Endpoint=/health
       - ConnectionStrings__Redis=redis:6379
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=game_inventory;Username=postgres;Password=password
     depends_on:
       consul:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     networks:
       - game-network

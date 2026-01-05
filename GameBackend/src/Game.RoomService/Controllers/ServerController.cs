@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Game.RoomService.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/rooms")]
 public class ServerController : ControllerBase
 {
     private readonly IGameServerManager _manager;
@@ -15,7 +15,7 @@ public class ServerController : ControllerBase
         _manager = manager;
     }
 
-    [HttpPost("register")]
+    [HttpPost]
     public ActionResult<string> Register([FromBody] RegisterServerRequest request)
     {
         var id = _manager.RegisterServer(request);
@@ -32,7 +32,7 @@ public class ServerController : ControllerBase
         return NotFound("Server not found. Please re-register.");
     }
 
-    [HttpGet("list")]
+    [HttpGet]
     public ActionResult<IEnumerable<GameServerInfo>> GetList([FromQuery] string? mapName)
     {
         return Ok(_manager.GetAvailableServers(mapName ?? ""));

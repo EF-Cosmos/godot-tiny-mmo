@@ -1,14 +1,14 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
 EXPOSE 8080
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY ["Game.AuthService/Game.AuthService.csproj", "Game.AuthService/"]
-COPY ["Game.Shared/Game.Shared.csproj", "Game.Shared/"]
-RUN dotnet restore "Game.AuthService/Game.AuthService.csproj"
+COPY ["src/Game.AuthService/Game.AuthService.csproj", "src/Game.AuthService/"]
+COPY ["shared/Game.Shared/Game.Shared.csproj", "shared/Game.Shared/"]
+RUN dotnet restore "src/Game.AuthService/Game.AuthService.csproj"
 COPY . .
-WORKDIR "/src/Game.AuthService"
+WORKDIR "/src/src/Game.AuthService"
 RUN dotnet build "Game.AuthService.csproj" -c Release -o /app/build
 
 FROM build AS publish

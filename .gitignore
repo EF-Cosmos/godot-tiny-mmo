@@ -60,5 +60,12 @@ bld/
 *.cache
 *.log
 
+# Claude AI files
+.claude/
+
 # Node.js dependencies
 node_modules/
+
+# Presentation and image files
+*.pptx
+*.png

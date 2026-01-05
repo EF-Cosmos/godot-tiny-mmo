@@ -1,3 +1,4 @@
+using Game.RoomService;
 using Game.RoomService.Services;
 using Game.Shared.Consul;
 

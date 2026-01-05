@@ -4,11 +4,11 @@ EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY ["Game.GameService/Game.GameService.csproj", "Game.GameService/"]
-COPY ["Game.Shared/Game.Shared.csproj", "Game.Shared/"]
-RUN dotnet restore "Game.GameService/Game.GameService.csproj"
+COPY ["src/Game.GameService/Game.GameService.csproj", "src/Game.GameService/"]
+COPY ["shared/Game.Shared/Game.Shared.csproj", "shared/Game.Shared/"]
+RUN dotnet restore "src/Game.GameService/Game.GameService.csproj"
 COPY . .
-WORKDIR "/src/Game.GameService"
+WORKDIR "/src/src/Game.GameService"
 RUN dotnet build "Game.GameService.csproj" -c Release -o /app/build
 
 FROM build AS publish
