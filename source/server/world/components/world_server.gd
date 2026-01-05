@@ -101,6 +101,28 @@ func _send_heartbeat() -> void:
 	http.request(room_service_url + "/heartbeat", headers, HTTPClient.METHOD_POST, body)
 
 
+func find_server_for_map(map_name: String, callback: Callable) -> void:
+	var http = HTTPRequest.new()
+	add_child(http)
+	http.request_completed.connect(func(result, code, headers, body):
+		http.queue_free()
+		if code == 200:
+			var servers = JSON.parse_string(body.get_string_from_utf8())
+			if servers and servers.size() > 0:
+				# Pick the first available server for this map
+				# In a real scenario, you might want to load balance based on player count
+				callback.call(servers[0])
+				return
+		
+		print("No server found for map: %s" % map_name)
+		callback.call(null)
+	)
+	
+	# Query RoomService for servers hosting this map
+	var query = "?mapName=%s" % map_name.uri_encode()
+	http.request(room_service_url + query, [], HTTPClient.METHOD_GET)
+
+
 func _connect_multiplayer_api_signals(api: SceneMultiplayer) -> void:
 	api.peer_connected.connect(_on_peer_connected)
 	api.peer_disconnected.connect(_on_peer_disconnected)

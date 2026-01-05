@@ -85,3 +85,15 @@ func authentication_call(_peer_id: int, data: PackedByteArray) -> void:
 	print("Authentification call from server with data: \"%s\"." % data.get_string_from_ascii())
 	multiplayer.send_auth(1, var_to_bytes(authentication_token))
 	multiplayer.complete_auth(1)
+
+
+@rpc("authority", "call_remote", "reliable")
+func redirect_to_server(host: String, port: int, token: String) -> void:
+	print("Received redirect to server: %s:%d" % [host, port])
+	close_connection()
+	
+	# Wait a bit to ensure clean disconnection
+	await get_tree().create_timer(0.5).timeout
+	
+	connect_to_server(host, port, token)
+
