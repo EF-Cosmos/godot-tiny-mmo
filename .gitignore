@@ -5,6 +5,9 @@ export_presets.cfg
 # Imported translations (automatically generated from CSV files)
 *.translation
 
+# Godot import files (automatically generated)
+*.import
+
 # System/tool-specific ignores
 .directory
 *DS_Store
