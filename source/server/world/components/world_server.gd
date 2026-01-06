@@ -50,16 +50,37 @@ func _register_to_room_service() -> void:
 	var http = HTTPRequest.new()
 	add_child(http)
 	http.request_completed.connect(_on_registration_completed)
-	
+
+	# Read server type from config (default: "world")
+	var server_type := server_config.get("server_type", "world")
+
+	# Read instance_id from config, or auto-generate
+	var instance_id := server_config.get("instance_id", "")
+	if instance_id.is_empty():
+		var map_name = server_config.get("map_name", "World")
+		instance_id = "%s-%d" % [map_name, server_config.port]
+
+	# Build tags dictionary from existing config
+	var tags := {
+		"hardcore": str(server_config.get("hardcore", false)).to_lower(),
+		"pvp": str(server_config.get("pvp", false)).to_lower(),
+		"bonus_xp": str(server_config.get("bonus_xp", 0.0))
+	}
+
 	var body = JSON.stringify({
 		"name": server_config.get("name", "Unknown Server"),
 		"address": server_config.bind_address, # Or public IP if needed
 		"port": server_config.port,
-		"region": "default",
+		"region": server_config.get("region", "default"),
 		"maxPlayers": server_config.get("max_players", 100),
-		"mapName": server_config.get("map_name", "default_map")
+		"mapName": server_config.get("map_name", "default_map"),
+
+		# New fields for server identification
+		"serverType": server_type,
+		"instanceId": instance_id,
+		"tags": tags
 	})
-	
+
 	var headers = ["Content-Type: application/json"]
 	var error = http.request(room_service_url + "/register", headers, HTTPClient.METHOD_POST, body)
 	if error != OK:

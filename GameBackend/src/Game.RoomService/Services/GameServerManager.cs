@@ -32,13 +32,18 @@ public class GameServerManager : IGameServerManager
             Region = request.Region,
             MaxPlayers = request.MaxPlayers,
             MapName = request.MapName,
-            LastHeartbeat = DateTime.UtcNow
+            LastHeartbeat = DateTime.UtcNow,
+
+            // Set new fields with defaults
+            ServerType = request.ServerType ?? "world",
+            InstanceId = request.InstanceId ?? $"{request.MapName}-{request.Port}",
+            Tags = request.Tags ?? new Dictionary<string, string>()
         };
 
         _servers[server.Id] = server;
-        _logger.LogInformation("Registered new game server: {Name} ({Id}) at {Address}:{Port}", 
-            server.Name, server.Id, server.Address, server.Port);
-        
+        _logger.LogInformation("Registered new game server: {Name} ({Id}) at {Address}:{Port}, Type: {ServerType}, Instance: {InstanceId}",
+            server.Name, server.Id, server.Address, server.Port, server.ServerType, server.InstanceId);
+
         return server.Id;
     }
 
