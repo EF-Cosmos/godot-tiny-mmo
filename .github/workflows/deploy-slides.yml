@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - refactor/microservices-backend
     paths:
       - 'slides/**'
       - '.github/workflows/deploy-slides.yml'

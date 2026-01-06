@@ -147,7 +147,7 @@ func _on_message_edit_text_submitted(new_text: String, line_edit: LineEdit) -> v
 		)
 	else:
 		if ChatServiceManager.instance and ChatServiceManager.instance.chat_client and ChatServiceManager.instance.chat_client.connection_state == 2: # CONNECTED
-			ChatServiceManager.instance.chat_client.send_message(new_text, current_channel)
+			ChatServiceManager.instance.chat_client.send_message(current_channel, new_text)
 		else:
 			InstanceClient.current.request_data(
 				&"chat.message.send",
